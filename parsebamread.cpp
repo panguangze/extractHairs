@@ -272,14 +272,13 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
             while (ss <= chromvars[chrom].last && varlist[ss].position >= start + l2 && varlist[ss].position < start + l2 + ol) {
 
                 // function call
-                if (varlist[ss].heterozygous == '1' && varlist[ss].type == 0 && varlist[ss].bnd == 0) compare_read_SNP(read, varlist, ss, start, l1, l2, fragment);
+                if (varlist[ss].heterozygous == '1' && varlist[ss].type == 0 && varlist[ss].bnd == 0) 
+                    compare_read_SNP(read, varlist, ss, start, l1, l2, fragment);
                 else if (varlist[ss].heterozygous == '2' && varlist[ss].type == 0 && varlist[ss].bnd == 0) {
                     compare_read_SNP(read, varlist, ss, start, l1, l2, fragment);
                 } else if (varlist[ss].heterozygous == '1' && varlist[ss].type != 0 && varlist[ss].position < start + l2 + ol - 1 && reflist->current >= 0 && PARSEINDELS == 1 && varlist[ss].bnd == 0) {
                     compare_read_INDEL(read, varlist, ss, start, l1, l2, ol, fragment, i, reflist);
-                } else if (varlist[ss].heterozygous == '1' && varlist[ss].bnd == 1) {
-                    compare_read_BND(read, varlist, ss, start, l1, l2, fragment);
-                }
+                } 
                 ss++;
             }
 
@@ -299,6 +298,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
             }
             l1 += ol;
         } else if (op == BAM_CDEL) {
+
             if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 && varlist[ss].type == -1 * ol  && PARSEINDELS == 1 && ss <= chromvars[chrom].last && varlist[ss].bnd == 0) {
                 if (IFLAG) fprintf(stdout, "%s DELETION %d %s:%d:%s:%s\n", read->readid, start + l2, varlist[ss].chrom, varlist[ss].position, varlist[ss].RA, varlist[ss].AA);
                 fragment->alist[fragment->variants].varid = ss;
@@ -314,7 +314,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         } else if (op == BAM_CREF_SKIP) l2 += ol;
         else if (op == BAM_CSOFT_CLIP) // primary alignment
         {
-            if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
+            if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 + 1 && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
             {
                 fragment->alist[fragment->variants].varid = ss;
                 fragment->alist[fragment->variants].allele = '1';
@@ -329,7 +329,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         }
         else if (op == BAM_CHARD_CLIP) // secondary alignment 
         {
-            if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
+            if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 + 1 && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
             {
                 fragment->alist[fragment->variants].varid = ss;
                 fragment->alist[fragment->variants].allele = '1';

@@ -51,7 +51,7 @@ struct alignedread {
     bool rescued;
 };
 
-int fetch_func(const bam1_t *b, void *data, sam_hdr_t *header, struct alignedread* read);
+int fetch_func(const bam1_t *b, void *data, bam_hdr_t *header, struct alignedread* read);
 
 void free_readmemory(struct alignedread* read);
 

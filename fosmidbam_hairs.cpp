@@ -239,7 +239,7 @@ int parse_bamfile_fosmid(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         return -1;
     }
     bam1_t *b = bam_init1();
-    sam_hdr_t *header = sam_hdr_read(fp);
+    bam_hdr_t *header = sam_hdr_read(fp);
 
     while (sam_read1(fp, header, b) >= 0) {
         //readlist[r] = calloc(1,sizeof(struct alignedread));
@@ -295,6 +295,7 @@ int parse_bamfile_fosmid(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     for (reads = 0; reads < MAX_READS; reads++) free(readlist[reads]);
     free(readlist);
     bam_destroy1(b);
+    bam_hdr_destroy(header);
     return 0;
 }
 

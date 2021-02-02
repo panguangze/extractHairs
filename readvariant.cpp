@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <htslib/hts.h>
 #include <htslib/vcf.h>
 
 
@@ -189,7 +191,7 @@ int parse_variant(VARIANT* variant, char* buffer, int samplecol) {
 
         if (variant->type != 0) variant->position++; // add one to position for indels
 
-        if (strlen(variant->genotype))
+        if (strlen(variant->genotype))  //if indel, consider 0/1 only
         if ((variant->genotype[0] == '0' && variant->genotype[2] == '1') || (variant->genotype[0] == '1' && variant->genotype[2] == '0')) {
             //if (flag >0) fprintf(stderr,"%s %d %s %s \n",variant->chrom,variant->position,variant->allele1,variant->allele2);
             variant->heterozygous = '1'; // variant will be used for outputting hairs
@@ -267,91 +269,100 @@ int parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
     variant->id = (char*) malloc(strlen(record->d.id) + 1);
     strcpy(variant->id, record->d.id);
     variant->position = record->pos;
-    
+    //fprintf(stderr, "%d\n", record->pos);
     variant->altalleles =  record->n_allele - 1;
-
-    if (variant->altalleles > 2)
-    {
-        fprintf(stdout, "\nERROR: Non-diploid VCF entry detected.\n");
-        exit(1);
-    } 
     
-    variant->RA = (char *) malloc(strlen(record->d.allele[0] + 1));
+    variant->RA = (char *) malloc(strlen(record->d.allele[0]) + 1);
     strcpy(variant->RA, record->d.allele[0]);
+
+    variant->genotype = (char*) malloc(4);
+    int ngt_arr = 0, ngt = 0, *gt = NULL;
+
+    ngt = bcf_get_format_int32(header, record, "GT", &gt, &ngt_arr);
+    if (ngt > 2)
+    {
+        fprintf(stdout, "\nERROR: Non-diploid VCF entry detected. Each VCF entry must have a diploid genotype (GT) field consisting of two alleles in the set {0,1,2} separated by either \'/\' or \'|\'. For example, \"1/1\", \"0/1\", and \"0|2\" are valid diploid genotypes for HapCUT2, but \"1\", \"0/3\", and \"0/0/1\" are not.\n");
+        exit(1);
+    }
+    
+    variant->genotype[0] = bcf_gt_allele(gt[0]) + '0';
+    variant->genotype[1] = '/';
+    variant->genotype[2] = bcf_gt_allele(gt[1]) + '0';
+    variant->genotype[3] = '\0';
+    
+    free(gt); 
+    int gt_len = strlen(variant->genotype);
+
     int len = 0;
     int i = 1;
     for (; i <= variant->altalleles; i++)
         len += strlen(record->d.allele[i]) + 1; 
     variant->AA = (char *) malloc(len);
     
-    for (i = 0; i < strlen(record->d.allele[1]); i++)
-        variant->AA[i] = record->d.allele[1][i];
-    if (variant->altalleles > 1)
-    {   
-        variant->AA[i++] = ',';
-        for (int j = 0; j < strlen(record->d.allele[2]) + 1; j++)
-            variant->AA[i++] = record->d.allele[2][j];
+    int idx = 0;
+    for (i = 1; i <= variant->altalleles; i++)
+    {
+        len = strlen(record->d.allele[i]);
+        int j = 0;
+        for (j = 0; j < len; j++)
+            variant->AA[idx++] = record->d.allele[i][j];
+        if (i < variant->altalleles)
+            variant->AA[idx++] = ',';
+        else variant->AA[idx++] = '\0';
     }
-    else variant->AA[i] = '\0';
 
-    if (bcf_get_variant_types(record) == VCF_BND)
-        variant->bnd = 1;
-    else variant->bnd = 0;
+    int ninfo_arr = 0, ninfo = 0;
+    char * info = NULL;
 
-    // get gt string
-    variant->genotype = (char*) malloc(4);
-    int ndst = 0; char **dst = NULL;
-    bcf_get_format_string(header, record, "GT", &dst, &ndst);
-    strcpy(variant->genotype, dst[0]);
-    free(dst[0]); free(dst);
+    ninfo = bcf_get_info_string(header, record, "SVTYPE", &info, &ninfo_arr);
 
+    if (ninfo < 0)
+        variant->bnd = 0;
+    else {
+        if (strcmp(info, "BND") == 0)
+            variant->bnd = 1;
+        else    variant->bnd = 0;
+    }
+
+    free(info);
+    
     int j, k;
-    if (((variant->genotype[1] == '/' || variant->genotype[1] == '|')) &&
-       (variant->genotype[0] == '0' || variant->genotype[0] == '1' || variant->genotype[0] == '2') &&
-       (variant->genotype[2] == '0' || variant->genotype[2] == '1' || variant->genotype[2] == '2')){
-
-        if (variant->genotype[0] != '2' && variant->genotype[2] != '2') // both alleles are 0/1
+    if (((variant->genotype[1] == '/' || variant->genotype[1] == '|')) && gt_len == 3){
+        //for mhc phasing, you should not care , just find the two allele 
+        if (variant->genotype[0] == '0' || variant->genotype[2] == '0')     // 0/x case
         {
             variant->allele1 = (char*) malloc(strlen(variant->RA) + 1);
             strcpy(variant->allele1, variant->RA);
-            j = 0;
-            while (variant->AA[j] != ',' && j < strlen(variant->AA)) j++;
-            variant->allele2 = (char*) malloc(j + 1);
-            for (i = 0; i < j; i++) variant->allele2[i] = variant->AA[i];
-            variant->allele2[i] = '\0';
+            int index = 0;
+            if (variant->genotype[0] == '0')
+                index = variant->genotype[2] - '0';
+            else 
+                index = variant->genotype[0] - '0';
+            
+            variant->allele2 = (char*) malloc(strlen(record->d.allele[index]) + 1);
+            strcpy(variant->allele2, record->d.allele[index]);
             variant->type = strlen(variant->allele2) - strlen(variant->allele1);
-        } else if (variant->genotype[0] == '0' || variant->genotype[2] == '0') // at least one allele is reference
-        {
-            variant->allele1 = (char*) malloc(strlen(variant->RA) + 1);
-            strcpy(variant->allele1, variant->RA);
-            j = 0;
-            while (variant->AA[j] != ',' && j < strlen(variant->AA)) j++;
-            k = j + 1;
-            while (variant->AA[k] != ',' && k < strlen(variant->AA)) k++;
-            variant->allele2 = (char*) malloc(k - j + 1);
-            for (i = j + 1; i < k; i++) variant->allele2[i - j - 1] = variant->AA[i];
-            variant->allele2[i - j - 1] = '\0';
-            variant->type = strlen(variant->allele2) - strlen(variant->allele1);
-        } else // reference allele is missing 1/2 case
-        {
-            j = 0;
-            while (variant->AA[j] != ',' && j < strlen(variant->AA)) j++;
-            variant->allele1 = (char*) malloc(j + 1);
-            for (i = 0; i < j; i++) variant->allele1[i] = variant->AA[i];
-            variant->allele1[i] = '\0';
-            k = j + 1;
-            while (variant->AA[k] != ',' && k < strlen(variant->AA)) k++;
-            variant->allele2 = (char*) malloc(k - j + 1);
-            for (i = j + 1; i < k; i++) variant->allele2[i - j - 1] = variant->AA[i];
-            variant->allele2[i - j - 1] = '\0';
-            variant->type = strlen(variant->allele2) - strlen(variant->allele1);
-            //fprintf(stderr,"non-reference het variant %s %s \n",variant->allele1,variant->allele2);
-            // need to allow for multiple alternate alleles or discard ones where there is a comma in alternate allele list
-            //j=0; while (variant->AA[j] != ',' && j < strlen(variant->AA)) j++;
-            //variant->allele1 = (char*)malloc(j+1); for (i=0;i<j;i++) variant->allele1[i] = variant->AA[i]; variant->allele1[i] = '\0';
-            //variant->type = strlen(variant->allele2) -strlen(variant->allele1);
         }
 
+        else {                                                              // x/y case
+            int index1 = 0, index2 = 0;
+            if (variant->genotype[0] > variant->genotype[2])
+            {
+                index1 = variant->genotype[2] - '0';
+                index2 = variant->genotype[0] - '0';
+            }
+            else 
+            {
+                index1 = variant->genotype[0] - '0';
+                index2 = variant->genotype[2] - '0';
+            }
+
+            variant->allele1 = (char *) malloc(strlen(record->d.allele[index1]) + 1);
+            variant->allele2 = (char *) malloc(strlen(record->d.allele[index2]) + 1);
+            strcpy(variant->allele1, record->d.allele[index1]);
+            strcpy(variant->allele2, record->d.allele[index2]);
+            variant->type = strlen(variant->allele2) - strlen(variant->allele1);
+        }
         // reduce the length of the two alleles for VCF format outputted by samtoools, april 17 2012
         // basically CAAAA -> CAA  can be reduced to CA -> C
         i = strlen(variant->allele1) - 1;
@@ -368,14 +379,17 @@ int parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
 
         if (variant->type != 0) variant->position++; // add one to position for indels
 
-        if (strlen(variant->genotype))
-        if ((variant->genotype[0] == '0' && variant->genotype[2] == '1') || (variant->genotype[0] == '1' && variant->genotype[2] == '0')) {
-            //if (flag >0) fprintf(stderr,"%s %d %s %s \n",variant->chrom,variant->position,variant->allele1,variant->allele2);
-            variant->heterozygous = '1'; // variant will be used for outputting hairs
-            //fprintf(stdout,"variant %s %s %s %c\n",variant->allele1,variant->allele2,variant->genotype,variant->heterozygous);
-            return 1;
+        if (strlen(variant->genotype) || variant->bnd == 1)      // if indel or bnd, consider 0/1 only
+        {
+            if ((variant->genotype[0] == '0' && variant->genotype[2] == '1') || (variant->genotype[0] == '1' && variant->genotype[2] == '0')) {
+                //if (flag >0) fprintf(stderr,"%s %d %s %s \n",variant->chrom,variant->position,variant->allele1,variant->allele2);
+                variant->heterozygous = '1'; // variant will be used for outputting hairs
+                //fprintf(stdout,"variant %s %s %s %c\n",variant->allele1,variant->allele2,variant->genotype,variant->heterozygous);
+                return 1;
+            }
         }
-        if ((variant->genotype[0] == '0' && variant->genotype[2] == '2') || (variant->genotype[0] == '2' && variant->genotype[2] == '0')) {
+        // snp only here 
+        if ((variant->genotype[0] == '0' && variant->genotype[2] >= '2') || (variant->genotype[0] >= '2' && variant->genotype[2] == '0')) {
             //if (flag >0) fprintf(stderr,"%s %d %s %s \n",variant->chrom,variant->position,variant->allele1,variant->allele2);
             variant->heterozygous = '1'; // variant will be used for outputting hairs
             //fprintf(stdout,"variant %s %s %s %c\n",variant->allele1,variant->allele2,variant->genotype,variant->heterozygous);
@@ -390,7 +404,7 @@ int parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
             return 0;
         }
     } else {
-        fprintf(stdout, "\nERROR: Non-diploid VCF entry detected. Each VCF entry must have a diploid genotype (GT) field consisting of two alleles in the set {0,1,2} separated by either \'/\' or \'|\'. For example, \"1/1\", \"0/1\", and \"0|2\" are valid diploid genotypes for HapCUT2, but \"1\", \"0/3\", and \"0/0/1\" are not.\n");
+        fprintf(stdout, "\nERROR: Non-diploid VCF entry detected. Each VCF entry must have a diploid genotype (GT) field consisting of two alleles in the set {0,1,2} separated by either \'/\' or \'|\'. For example, \"1/1\", \"0/1\", and \"0|2\" are valid diploid genotypes for HapCUT2, but \"1\", \"0/3\", and \"0/0/1\" are not.\n%d\n", strlen(variant->genotype));
         exit(1);
     }
 }
@@ -417,7 +431,7 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
     while (bcf_read1(fp, header, record) >= 0)
     {
         bcf_unpack(record, BCF_UN_ALL);
-        het = parse_variant_hts(varlist, record, header);
+        het = parse_variant_hts(&varlist[i], record, header);
         (*hetvariants) += het;
             //if (het ==0) continue; else (*hetvariants)++;
             //	fprintf(stdout,"%s %d %s %s %s %s\n",varlist[i].chrom,varlist[i].position,varlist[i].RA,varlist[i].AA,varlist[i].genotype,prevchrom);

@@ -144,7 +144,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         return -1;
     }
     bam1_t *b = bam_init1();
-    sam_hdr_t *header = sam_hdr_read(fp);
+    bam_hdr_t *header = sam_hdr_read(fp);
 
     while (sam_read1(fp, header, b) >= 0) {
         fetch_func(b, fp, header, read);
@@ -246,7 +246,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         if (prevchrom >=0) clean_fragmentlist(flist, &fragments, varlist, -1, read->position, prevchrom); // added extra filter 03/08/18
     }
     bam_destroy1(b);
-    sam_hdr_destroy(header);
+    bam_hdr_destroy(header);
     free(flist); free(read); free(fragment.alist);
     if (REALIGN_VARIANTS){
         free(fcigarlist);

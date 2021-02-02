@@ -13,7 +13,7 @@ void print_read_debug(struct alignedread* read)
 	fprintf(stderr,"\n");
 }
 
-int fetch_func(const bam1_t *b, void *data, sam_hdr_t *header, struct alignedread* read) {
+int fetch_func(const bam1_t *b, void *data, bam_hdr_t *header, struct alignedread* read) {
     samFile *fp = (samFile*) data;
     uint32_t *cigar = bam_get_cigar(b);
     const bam1_core_t *c = &b->core;
