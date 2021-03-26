@@ -262,9 +262,10 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
     int l1 = 0, l2 = 0; // l1 is advance on read, l2 is advance on reference genome
     int op = 0, ol = 0; // op == operation; ol == operation length
 
-    //    for abnormal read pair insertion size
+    //    for abnormal read pair insertion size,
+//    fixme bnd direction
     if (read->IS < -MAX_IS) {
-        int end_pos = start - 300;
+        int end_pos = start - 300; // negative abnormal IS, search sv bnd before 300 bp
         while (varlist[ss].position >= end_pos && ss >= chromvars[chrom].first) {
             if (varlist[ss].bnd == 1 && varlist[ss].heterozygous == '1' ) {
                 fragment->alist[fragment->variants].varid = ss;
@@ -364,8 +365,9 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
     }
 
 //    for abnormal read pair insertion size
+//    fixme bnd direction
     if (read->IS > MAX_IS) {
-        int end_pos = end + 300;
+        int end_pos = end + 300; // positive abnormal IS, search sv bnd after reads alignment end 300 bp
         while (varlist[ss].position <= end_pos && ss <= chromvars[chrom].last) {
             if (varlist[ss].bnd ==1 && varlist[ss].heterozygous == '1' ) {
                 fragment->alist[fragment->variants].varid = ss;
