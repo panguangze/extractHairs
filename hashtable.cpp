@@ -49,4 +49,15 @@ int getindex(HASHTABLE* ht, char* chrom) {
     return -1;
 }
 
-
+int update_value(HASHTABLE* ht, char* key, int value) {
+    int hash = hashstring(key, ht->htsize);
+    keypointer = ht->blist[hash];
+    while (keypointer != NULL) {
+        if (strcmp(keypointer->key, key) == 0) {
+            keypointer->value = value;
+            return 0;
+        }
+        keypointer = keypointer->next;
+    }
+    return -1;
+}

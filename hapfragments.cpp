@@ -1,5 +1,69 @@
 #include "hapfragments.h"
 
+
+// when --vcf-phased specified, filter fragment by phasing info
+
+int filter_by_phasing_info(FRAGMENT* fragment, VARIANT* varlist){
+    int len = fragment->variants;
+    int phase_set_count = 0;
+    //h0 > left side count //h1 > right side count // fragment score for each phase_set // side: vcf gt x/x, left 0, right 1
+    HASHTABLE h0, h1;
+    h0.htsize = len;
+    h1.htsize = len;
+    init_hashtable(&h0);
+    init_hashtable(&h1);
+//    int* score = (int*) malloc(sizeof(int) * len);
+    char** phase_set_keys = (char**) malloc(sizeof(char*) * len);
+    int phase_set = 0;
+    VARIANT* var = NULL;
+    for (int i = 0; i < len; i++) {
+        var = &varlist[fragment->alist[i].varid];
+        phase_set = var->phase_set;
+        if(phase_set == 0) continue;
+//        phase_set to phase_set_str
+        int length = snprintf( NULL, 0, "%d", phase_set );
+        char* phase_set_str = (char *)malloc( sizeof(char)*(length + 1));
+        snprintf( phase_set_str, length + 1, "%d", phase_set );
+//        specific side left or right
+        int v = -1;
+        if (var->genotype[0] == fragment->alist[i].allele) {
+            v = getindex(&h0, phase_set_str);
+            if (v == -1) insert_keyvalue(&h0, phase_set_str, length, 1);
+            else update_value(&h0, phase_set_str, v+1);
+        }else {
+            v = getindex(&h1, phase_set_str);
+            if (v == -1) insert_keyvalue(&h1, phase_set_str, length, 1);
+            else update_value(&h1, phase_set_str, v+1);
+        }
+        int found = 0;
+        for (int k = 0; k < phase_set_count; k++) {
+            if(strcmp(phase_set_keys[k], phase_set_str) == 0) {found = 1;break;};
+        }
+        if (found == 0) {
+            phase_set_keys[phase_set_count] = (char *)malloc( sizeof(char)*(length + 1));
+            phase_set_keys[phase_set_count][length] = '\0';
+            strcpy(phase_set_keys[phase_set_count++], phase_set_str);
+        }
+        free(phase_set_str);
+    }
+    if (phase_set_count == 0) return 1;
+// score
+    char* p_s_k;
+    float c_0, c_1, score, score_gt_65 = 0;
+    for (int j = 0; j < phase_set_count; j++) {
+        p_s_k = phase_set_keys[j];
+        if (p_s_k == NULL) continue;
+        c_0 = getindex(&h0, p_s_k);
+        c_1 = getindex(&h1, p_s_k);
+        score = c_0 / (c_1 + c_0);
+        if (score >= 0.65) score_gt_65++;
+        free(phase_set_keys[j]);
+    }
+    free(phase_set_keys);
+    if(score_gt_65/phase_set_count > 0.65) return 1;
+    return 0;
+}
+
 // sort such that mate pairs are together and reverse sorted by starting position of second read in a mate-piar
 
 int compare_fragments(const void *a, const void *b) {
@@ -16,6 +80,11 @@ int compare_alleles(const void *a, const void *b) {
 
 int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
     if (PRINT_FRAGMENTS == 0) return 0;
+
+    if (VCF_PHASED) {
+        int is_print = filter_by_phasing_info(fragment, varlist);
+        if (is_print == 0) return 0;
+    }
     int i = 0;
     /*
        fprintf(stdout,"HAIR %s %d \t",fragment->id,fragment->variants);
@@ -68,6 +137,20 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
 int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) {
     if (PRINT_FRAGMENTS == 0) return 0;
     int i = 0;
+    if (VCF_PHASED) {
+        FRAGMENT* f = (FRAGMENT*)malloc(sizeof(FRAGMENT));
+        f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2->variants));
+        f->variants = f1->variants + f2->variants;
+        for (i = 0; i < f1->variants; i++) {
+            f->alist[i] = f1->alist[i];
+        }
+        for (i = 0; i < f2->variants; i++) {
+            f->alist[i+f1->variants] = f2->alist[i];
+        }
+        int is_print = filter_by_phasing_info(f, varlist);
+        free(f);
+        if (is_print == 0) return 0;
+    }
     f1->blocks = 1;
     for (i = 0; i < f1->variants - 1; i++) {
         if (f1->alist[i + 1].varid - f1->alist[i].varid != 1) f1->blocks++;

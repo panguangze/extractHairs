@@ -314,7 +314,12 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         } else if (op == BAM_CREF_SKIP) l2 += ol;
         else if (op == BAM_CSOFT_CLIP) // primary alignment
         {
-            if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 + 1 && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
+            auto varlist_ss = varlist[ss];
+            if (ss == 126040){
+                auto k = 0;
+            }
+//            fixme sv position is not a precise location, a range +-5
+            if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + 6 && varlist[ss].position >= start + l2 -6) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
             {
                 fragment->alist[fragment->variants].varid = ss;
                 fragment->alist[fragment->variants].allele = '1';
@@ -329,7 +334,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         }
         else if (op == BAM_CHARD_CLIP) // secondary alignment 
         {
-            if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 + 1 && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
+            if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + 6 && varlist[ss].position >= start + l2 -6) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
             {
                 fragment->alist[fragment->variants].varid = ss;
                 fragment->alist[fragment->variants].allele = '1';

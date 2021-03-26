@@ -32,6 +32,9 @@ typedef struct {
     float dm;
 } FRAGMENT;
 
+// when --vcf-phased specified, filter fragment by phasing info
+int filter_by_phasing_info(FRAGMENT* fragment, VARIANT* varlist);
+
 int compare_fragments(const void *a, const void *b);
 
 int compare_alleles(const void *a, const void *b);

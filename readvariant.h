@@ -18,6 +18,7 @@ extern int TRI_ALLELIC;
 
 extern int BSIZE;
 extern int PRINT_FRAGMENTS;
+extern bool VCF_PHASED;
 //int VARIANTS = 0;
 
 
@@ -42,6 +43,7 @@ typedef struct {
     int bnd; 
     // total reads covering this variant (haploid/diploid, A1-> reads supporting reference allele (single-read)
     //	float L11,L12,L22; // genotype likelihoods for three possible genotypes
+    int phase_set; // phase_set for phased vcf
 } VARIANT;
 
 // information about the variants on each chromosome
@@ -71,6 +73,8 @@ int compare_fragments(const void *a,const void *b);
  */
 
 int count_variants(char* vcffile, char* sampleid, int* samplecol);
+
+int count_variants_hts(char* vcffile, char* sampleid, int* samplecol);
 
 int parse_variant(VARIANT* variant, char* buffer, int samplecol);
 
