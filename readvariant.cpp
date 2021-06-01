@@ -9,6 +9,27 @@
 #include <htslib/vcf.h>
 
 
+int count_variants_hts(char* vcffile, char* sampleid, int* samplecol){
+    vcfFile *fp;
+    if ((fp = vcf_open(vcffile, "r")) == 0)
+    {
+        fprintf(stderr, "\nFail to open VCF file %s\n", vcffile);
+        exit(-1);
+    }
+
+    bcf_hdr_t *header = bcf_hdr_read(fp);
+    bcf1_t *record = bcf_init();
+    int variants = 0;
+    while (bcf_read1(fp, header, record) >= 0)
+    {
+        variants++;
+    }
+
+    bcf_destroy(record);
+    bcf_hdr_destroy(header);
+    vcf_close(fp);
+    return variants;
+}
 
 // count the # of variants in VCF file to allocate space for VCF variant array
 
@@ -262,6 +283,7 @@ int parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
     variant->A2 = 0;
     variant->H1 = 0;
     variant->H2 = 0;
+    variant->phase_set = 0;
 
     const char *chrom = bcf_seqname(header, record);
     variant->chrom = (char*) malloc(strlen(chrom) + 1);
@@ -277,6 +299,11 @@ int parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
 
     variant->genotype = (char*) malloc(4);
     int ngt_arr = 0, ngt = 0, *gt = NULL;
+    int nps_arr = 0, nps = 0, *ps = NULL;
+    if (VCF_PHASED) {
+        nps = bcf_get_format_int32(header, record, "PS", &ps, &nps_arr);
+        if (nps == 1) variant->phase_set = *ps;
+    }
 
     ngt = bcf_get_format_int32(header, record, "GT", &gt, &ngt_arr);
     if (ngt > 2)
@@ -284,7 +311,9 @@ int parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
         fprintf(stdout, "\nERROR: Non-diploid VCF entry detected. Each VCF entry must have a diploid genotype (GT) field consisting of two alleles in the set {0,1,2} separated by either \'/\' or \'|\'. For example, \"1/1\", \"0/1\", and \"0|2\" are valid diploid genotypes for HapCUT2, but \"1\", \"0/3\", and \"0/0/1\" are not.\n");
         exit(1);
     }
-    
+    char t = bcf_gt_allele(gt[0]);
+//    fixme for gvcf genotype ./. t = -1
+    if (t == -1) return 0;
     variant->genotype[0] = bcf_gt_allele(gt[0]) + '0';
     variant->genotype[1] = '/';
     variant->genotype[2] = bcf_gt_allele(gt[1]) + '0';

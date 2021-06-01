@@ -6,7 +6,7 @@ set(CMAKE_C_COMPILE gcc)
 project(ExtractHAIRs)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_BUILD_TYPE RELEASE)
+set(CMAKE_BUILD_TYPE DEBUG)
 set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXX_FLAGS} -O0 -Wall -ggdb")
 set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 ")
 
@@ -22,4 +22,4 @@ set(LIBHTS libhts.a)
 
 add_executable(ExtractHAIRs ${EXTRACT_SRC})
 
-target_link_libraries(ExtractHAIRs /usr/local/lib/libhts.so z) 
+target_link_libraries(ExtractHAIRs -lhts z)

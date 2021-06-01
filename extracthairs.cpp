@@ -47,6 +47,7 @@ char* GROUPNAME; // for fragments from different pools, SRRxxx
 FILE* fragment_file;
 int TRI_ALLELIC = 0;
 int VERBOSE = 0;
+bool VCF_PHASED = false;
 
 int* fcigarlist; // global variable
 
@@ -103,7 +104,8 @@ void print_options() {
     fprintf(stderr, "--noquality <INTEGER> : if the bam file does not have quality string, this value will be used as the uniform quality value, default 0 \n");
     //fprintf(stderr,"--triallelic <0/1> : print information about , default 0 \n");
     fprintf(stderr, "--ref <FILENAME> : reference sequence file (in fasta format), optional but required for indels, should be indexed using samtools\n");
-    fprintf(stderr, "--out <FILENAME> : output filename for haplotype fragments, if not provided, fragments will be output to stdout\n\n");
+    fprintf(stderr, "--out <FILENAME> : output filename for haplotype fragments, if not provided, fragments will be output to stdout\n");
+    fprintf(stderr, "--vcf-phased <0/1>: if the input vcf has been phased, then we will filter reads according to phasing info\n\n");
     //fprintf(stderr,"--out : output file for haplotype informative fragments (hairs)\n\n");
 }
 
@@ -382,6 +384,8 @@ int main(int argc, char** argv) {
         }else if (strcmp(argv[i], "--groupname") == 0) {
             GROUPNAME = (char*) malloc(1024);
             strcpy(GROUPNAME, argv[i + 1]);
+        }else if (strcmp(argv[i], "--vcf-phased") == 0) {
+            if (strcmp(argv[i+1], "0") != 0) VCF_PHASED = true;
         }else{
             fprintf(stderr, "\nERROR: Invalid Option \"%s\" specified.\n",argv[i]);
             exit(1);
@@ -411,7 +415,7 @@ int main(int argc, char** argv) {
     int chromosomes = 0;
 
     if (VCFformat == 1) {
-        variants = count_variants(variantfile, sampleid, &samplecol);
+        variants = count_variants_hts(variantfile, sampleid, &samplecol);
         if (variants < 0) return -1;
         varlist = (VARIANT*) malloc(sizeof (VARIANT) * variants);
         chromosomes = read_variantfile_hts(variantfile, varlist, &ht, &hetvariants);

@@ -29,5 +29,7 @@ int insert_keyvalue(HASHTABLE* ht, char* key, int slen, int value);
 
 int getindex(HASHTABLE* ht, char* chrom);
 
+int update_value(HASHTABLE* ht, char* key, int value);
+
 #endif
 
