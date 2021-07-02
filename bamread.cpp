@@ -1,4 +1,5 @@
 #include "bamread.h"
+#include <cstring>
 
 char INT_CIGAROP[] = {'M', 'I', 'D', 'N', 'S', 'H', 'P', '=', 'X'};
 

@@ -36,9 +36,11 @@ int MAXFRAG = 500000;
 int VARIANTS = 0;
 int VCFformat = 0;
 int PARSEINDELS = 0;
+int PARSEBND= 0;
 int SINGLEREADS = 0;
 int LONG_READS = 0;
 int REALIGN_VARIANTS = 0;
+int MINBNDIS = 0;
 //int QVoffset = 33; declared in samread.h
 FILE* logfile;
 int PFLAG = 1;
@@ -100,12 +102,14 @@ void print_options() {
     fprintf(stderr, "--maxIS <INT> : maximum insert size for a paired-end read to be considered as a single fragment for phasing, default 1000\n");
     fprintf(stderr, "--minIS <INT> : minimum insert size for a paired-end read to be considered as single fragment for phasing, default 0\n");
     fprintf(stderr, "--PEonly <0/1> : do not use single end reads, default is 0 (use all reads)\n");
-    fprintf(stderr, "--indels <0/1> : extract reads spanning INDELS, default is 0, variants need to specified in VCF format to use this option\n");
+    fprintf(stderr, "--indels <0/1> : extract reads spanning INDELS, default 0, variants need to specified in VCF format to use this option\n");
+    fprintf(stderr, "--breakends <0/1> : extract reads spanning break end, default is 0, variants need to specified in VCF format to use this option\n");
+    fprintf(stderr, "--fosmid <0/1> : extract reads with fosmid pool library preparation, default 0, specified if you are using mate-pair seqeuncing. \n");
     fprintf(stderr, "--noquality <INTEGER> : if the bam file does not have quality string, this value will be used as the uniform quality value, default 0 \n");
     //fprintf(stderr,"--triallelic <0/1> : print information about , default 0 \n");
     fprintf(stderr, "--ref <FILENAME> : reference sequence file (in fasta format), optional but required for indels, should be indexed using samtools\n");
     fprintf(stderr, "--out <FILENAME> : output filename for haplotype fragments, if not provided, fragments will be output to stdout\n");
-    fprintf(stderr, "--vcf-phased <0/1>: if the input vcf has been phased, then we will filter reads according to phasing info\n\n");
+    //fprintf(stderr, "--vcf-phased <0/1>: if the input vcf has been phased, then we will filter reads according to phasing info\n\n");
     //fprintf(stderr,"--out : output file for haplotype informative fragments (hairs)\n\n");
 }
 
@@ -150,6 +154,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 
     while (sam_read1(fp, header, b) >= 0) {
         fetch_func(b, fp, header, read);
+        // notice that supplementary reads is not dropped 
         if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)) || read->mquality < MIN_MQ) {
             free_readmemory(read);
             continue;
@@ -360,6 +365,9 @@ int main(int argc, char** argv) {
         }else if (strcmp(argv[i], "--indels") == 0){
             check_input_0_or_1(argv[i + 1]);
             PARSEINDELS = atoi(argv[i + 1]); // allow indels in hairs
+        }else if (strcmp(argv[i], "--breakends") == 0){
+            check_input_0_or_1(argv[i + 1]);
+            PARSEBND = atoi(argv[i + 1]); // allow indels in hairs
         }else if (strcmp(argv[i], "--pflag") == 0){
             check_input_0_or_1(argv[i + 1]);
             IFLAG = atoi(argv[i + 1]); // allow indels in hairs
@@ -420,7 +428,7 @@ int main(int argc, char** argv) {
         varlist = (VARIANT*) malloc(sizeof (VARIANT) * variants);
         chromosomes = read_variantfile_hts(variantfile, varlist, &ht, &hetvariants);
     } else {
-        fprintf(stderr, "\nError: This version of extractHairs only support vcf formatted file\n");
+        fprintf(stderr, "\nError: This refined version of extractHairs only support vcf formatted file\n");
         return -1;
     }
     // variants is set to hetvariants only, but this is not correct since
@@ -485,19 +493,7 @@ int main(int argc, char** argv) {
 		free(chromvars[i].intervalmap);
 	}
 	free(chromvars);
-    /*
-    for (i=0;i<ht.htsize;i++){
-        if (ht.blist[i] != NULL){
-            for(j=0;j<ht.bucketlengths[i];j++){
-                free(ht.blist[i]->key);
-            }
-            free(ht.blist[i]);
-        }
-    }
 
-    free(ht.blist);
-    free(ht.bucketlengths);
-    */
 	free(sampleid); free(varlist); free(reflist);
 	if (bamfiles > 0 && strcmp(variantfile,"None") !=0){
 		for (i=0;i<bamfiles;i++)
