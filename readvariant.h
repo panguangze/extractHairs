@@ -19,8 +19,18 @@ extern int TRI_ALLELIC;
 extern int BSIZE;
 extern int PRINT_FRAGMENTS;
 extern bool VCF_PHASED;
+extern int MINBNDIS;
 //int VARIANTS = 0;
 
+#define BNDTYPE_PAIRED 0
+#define BNDTYPE_SINGLE_END 1
+#define BNDTYPE_MUTLIPLE_MATE 2
+#define BNDTYPE_INTRA_CHROMOSOME 3
+
+#define BNDDIRECT_TRP 0
+#define BNDDIRECT_TLP 1 
+#define BNDDIRECT_PLT 2
+#define BNDDIRECT_PRT 3
 
 
 typedef struct {
@@ -41,6 +51,10 @@ typedef struct {
     int A1, A2;
     int H1, H2;
     int bnd; 
+    int bnd_pair_distance;  // distance between a pair of bnd 
+    int bnd_type;
+    int bnd_direction;    
+    
     // total reads covering this variant (haploid/diploid, A1-> reads supporting reference allele (single-read)
     //	float L11,L12,L22; // genotype likelihoods for three possible genotypes
     int phase_set; // phase_set for phased vcf
@@ -87,5 +101,7 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
 void build_intervalmap(CHROMVARS* chromvars, int chromosomes, VARIANT* varlist, int variants);
 
 int calculate_rightshift(VARIANT* varlist, int ss, REFLIST* reflist);
+
+int parse_bnd(VARIANT* variant);
 
 #endif
