@@ -7,6 +7,7 @@
 
 extern int VARIANTS;
 extern int PARSEINDELS;
+extern int PARSEBND;
 extern int IFLAG;
 extern int MAX_IS;
 

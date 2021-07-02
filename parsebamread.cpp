@@ -228,7 +228,10 @@ int compare_read_INDEL(struct alignedread* read, VARIANT* varlist, int ss, int s
 
 // this function needs some additional checks july 18 2012
 // find the variants that are covered by the read and determine the alleles at each of those variants
-
+// TODO: if SV is 1/1, we need to extract the linkage between pair-ended data
+// TODO: if SV is 0/1, we only connect the bnd with snp. caution: the direction matters 
+// TODO: test for spanning read, i.e. split alignment: 1) we dont need to consider the BND direction for them 2) notice that the bnd is covered through hardclip/softclip. 3) notice that the bnd alignment is not exactly matching
+// TODO: test for discordant support reads, i.e. abnormal insertion size. 1) need to consider the direction? 2) need to use the pair-ended info to locate breake-end
 int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, int paired, FRAGMENT* fragment, int chrom, REFLIST* reflist) {
 
     int start = read->position;
@@ -262,23 +265,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
     int l1 = 0, l2 = 0; // l1 is advance on read, l2 is advance on reference genome
     int op = 0, ol = 0; // op == operation; ol == operation length
 
-    //    for abnormal read pair insertion size,
-//    fixme bnd direction
-    if (read->IS < -MAX_IS) {
-        int end_pos = start - 300; // negative abnormal IS, search sv bnd before 300 bp
-        while (varlist[ss].position >= end_pos && ss >= chromvars[chrom].first) {
-            if (varlist[ss].bnd == 1 && varlist[ss].heterozygous == '1' ) {
-                fragment->alist[fragment->variants].varid = ss;
-                fragment->alist[fragment->variants].allele = '1';
-                fragment->alist[fragment->variants].qv = read->quality[l1];
-                fragment->variants++;
-                varlist[ss].depth++;
-                if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
-                else varlist[ss].A2 += 1;
-            }
-            ss--;
-        }
-    }
+
 
     ss = firstvar;
     for (i = 0; i < read->cigs; i++) {          //iter through base with CIGAR
@@ -333,55 +320,101 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         } else if (op == BAM_CREF_SKIP) l2 += ol;
         else if (op == BAM_CSOFT_CLIP) // primary alignment
         {
-//            fixme sv position is not a precise location, a range +-5
-            if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + 6 && varlist[ss].position >= start + l2 -6) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
+            //fixme sv position is not a precise location, a range +-5
+            if (PARSEBND)
             {
-                fragment->alist[fragment->variants].varid = ss;
-                fragment->alist[fragment->variants].allele = '1';
-                fragment->alist[fragment->variants].qv = read->quality[l1];
-                fragment->variants++;
-                varlist[ss].depth++;
-                if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
-                else varlist[ss].A2 += 1;
-                ss++; 
+                if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + 6 && varlist[ss].position >= start + l2 -6) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last )
+                {
+                    fragment->alist[fragment->variants].varid = ss;
+                    fragment->alist[fragment->variants].allele = '1';
+                    fragment->alist[fragment->variants].qv = read->quality[l1];
+                    fragment->variants++;
+                    varlist[ss].depth++;
+                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+                    else varlist[ss].A2 += 1;
+                    ss++; 
+                }
             }
             l1 += ol;
         }
-        else if (op == BAM_CHARD_CLIP) // secondary alignment 
+        else if (op == BAM_CHARD_CLIP) // secondary alignment ,notice that this is quite uncommon for reads with leght less than 150bp
         {
-            if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + 6 && varlist[ss].position >= start + l2 -6) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
+            if (PARSEBND)
             {
-                fragment->alist[fragment->variants].varid = ss;
-                fragment->alist[fragment->variants].allele = '1';
-                fragment->alist[fragment->variants].qv = read->quality[l1];
-                fragment->variants++;
-                varlist[ss].depth++;
-                if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
-                else varlist[ss].A2 += 1;
-                ss++; 
+                if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + 6 && varlist[ss].position >= start + l2 -6) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last )
+                {
+                    fragment->alist[fragment->variants].varid = ss;
+                    fragment->alist[fragment->variants].allele = '1';
+                    fragment->alist[fragment->variants].qv = read->quality[l1];
+                    fragment->variants++;
+                    varlist[ss].depth++;
+                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+                    else varlist[ss].A2 += 1;
+                    ss++; 
+                }
             }
             l2 += 0;
         }
     }
 
-//    for abnormal read pair insertion size
-//    fixme bnd direction
+if (PARSEBND)
+{//this works for het SV BND only 
+
+    // start - 300
+    //TODO: add direction check 
     if (read->IS > MAX_IS) {
-        int end_pos = end + 300; // positive abnormal IS, search sv bnd after reads alignment end 300 bp
-        while (varlist[ss].position <= end_pos && ss <= chromvars[chrom].last) {
-            if (varlist[ss].bnd ==1 && varlist[ss].heterozygous == '1' ) {
-                fragment->alist[fragment->variants].varid = ss;
-                fragment->alist[fragment->variants].allele = '1';
-                fragment->alist[fragment->variants].qv = read->quality[l1];
-                fragment->variants++;
-                varlist[ss].depth++;
-                if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
-                else varlist[ss].A2 += 1;
+            int start_pos = start - 300; 
+            int sss = firstvar;
+            while (varlist[sss].position >= start_pos && sss >= chromvars[chrom].first) {
+                if (varlist[sss].bnd ==1 && varlist[sss].heterozygous == '1' ) {
+                    if (varlist[sss].bnd_type != BNDTYPE_PAIRED) //we only consider paired at this moment
+                        break;
+                    if (abs(varlist[sss].bnd_pair_distance - read->IS) < 1500)
+                    {
+                        fragment->alist[fragment->variants].varid = sss;
+                        fragment->alist[fragment->variants].allele = '1';
+                        fragment->alist[fragment->variants ].qv = read->quality[l1];
+                        fragment->variants++;
+                        varlist[sss].depth++;
+                        if ((read->flag & 16) == 16) varlist[sss].A2 += 1 << 16;
+                        else varlist[sss].A2 += 1;
+                        break;
+                    }
+                    else {
+                        break;
+                    }
+                }
+                sss--;
             }
-            ss++;
+        }
+    //TODO: add direction check 
+    //end + 300
+        if (read->IS > MAX_IS) {
+            int end_pos = end + 300; // positive abnormal IS, search sv bnd after reads alignment end 300 bp
+            while (varlist[ss].position <= end_pos && ss <= chromvars[chrom].last) {
+                if (varlist[ss].bnd ==1 && varlist[ss].heterozygous == '1' ) {
+                    if (varlist[ss].bnd_type != BNDTYPE_PAIRED) //we only consider paired at this moment
+                        break;
+                    if (abs(varlist[ss].bnd_pair_distance - read->IS) < 1500)
+                    {
+                        fragment->alist[fragment->variants].varid = ss;
+                        fragment->alist[fragment->variants].allele = '1';
+                        fragment->alist[fragment->variants ].qv = read->quality[l1];
+                        fragment->variants++;
+                        varlist[ss].depth++;
+                        if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+                        else varlist[ss].A2 += 1;
+                        break;
+                    }
+                    else {
+                        break;
+                    }
+                }
+                ss++;
+            }
         }
     }
-    return 0;
+     return 0;
     //	printf("read %s %d %s %d %d %d %s XM %d parsed %d %d %d vars %d\n",read->readid,read->flag,read->chrom,read->position,read->mquality,read->IS,read->cigar,read->XM,chrom,start,end,ov);
 }
 
