@@ -109,7 +109,7 @@ void print_options() {
     //fprintf(stderr,"--triallelic <0/1> : print information about , default 0 \n");
     fprintf(stderr, "--ref <FILENAME> : reference sequence file (in fasta format), optional but required for indels, should be indexed using samtools\n");
     fprintf(stderr, "--out <FILENAME> : output filename for haplotype fragments, if not provided, fragments will be output to stdout\n");
-    //fprintf(stderr, "--vcf-phased <0/1>: if the input vcf has been phased, then we will filter reads according to phasing info\n\n");
+    fprintf(stderr, "--vcf-phased <0/1>: if the input vcf has been phased, then we will filter reads according to phasing info\n\n");
     //fprintf(stderr,"--out : output file for haplotype informative fragments (hairs)\n\n");
 }
 
