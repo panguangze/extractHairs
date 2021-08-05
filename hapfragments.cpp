@@ -1,5 +1,6 @@
 #include "hapfragments.h"
 
+int MAX_BQ=93; // base quality cannot exceed this, QV=60
 
 // when --vcf-phased specified, filter fragment by phasing info
 
@@ -99,7 +100,8 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
     for (i = 0; i < fragment->variants - 1; i++) {
         if (fragment->alist[i + 1].varid - fragment->alist[i].varid != 1) fragment->blocks++;
     }
-    fprintf(outfile, "%d %s", fragment->blocks, fragment->id);
+    fprintf(outfile, "%d %s", fragment->blocks,fragment->id);
+    //fprintf(outfile, "%d %c:%s", fragment->blocks, fragment->strand,fragment->id);
 
     //new format prints col 3 as data type (0 for normal, 1 for HiC) and col 4 as mate 2 index
     if (DATA_TYPE == 2){
@@ -112,21 +114,31 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
 
     //for (i=0;i<fragment->variants;i++) fprintf(stdout,"%c",fragment->alist[i].qv);
     // varid is printed with offset of 1 rather than 0 since that is encoded in the Hapcut program
-    fprintf(outfile, " %d %c", fragment->alist[0].varid + 1, fragment->alist[0].allele);
-    for (i = 1; i < fragment->variants; i++) {
-        if (fragment->alist[i].varid - fragment->alist[i - 1].varid == 1) fprintf(outfile, "%c", fragment->alist[i].allele);
-        else fprintf(outfile, " %d %c", fragment->alist[i].varid + 1, fragment->alist[i].allele);
+    
+    if (PRINT_COMPACT ==1)
+	{
+
+        fprintf(outfile, " %d %c", fragment->alist[0].varid + 1, fragment->alist[0].allele);
+        for (i = 1; i < fragment->variants; i++) {
+            if (fragment->alist[i].varid - fragment->alist[i - 1].varid == 1) fprintf(outfile, "%c", fragment->alist[i].allele);
+            else fprintf(outfile, " %d %c", fragment->alist[i].varid + 1, fragment->alist[i].allele);
+        }
+        fprintf(outfile, " ");
+        for (i = 0; i < fragment->variants; i++) fprintf(outfile, "%c", fragment->alist[i].qv);
+        fprintf(outfile, " ");
+	    fprintf(outfile, "%d", fragment->read_qual);
+        if (DATA_TYPE == 2)
+        {
+            if (fragment->rescued != 0 && fragment->rescued != 1)
+                fragment->rescued = 0;
+            fprintf(outfile, " %d %f", fragment->rescued, fragment->dm);
+        }
     }
-    fprintf(outfile, " ");
-    for (i = 0; i < fragment->variants; i++) fprintf(outfile, "%c", fragment->alist[i].qv);
-	fprintf(outfile, " ");
-	fprintf(outfile, "%d", fragment->read_qual);
-    if (DATA_TYPE == 2)
-    {
-        if (fragment->rescued != 0 && fragment->rescued != 1)
-            fragment->rescued = 0;
-        fprintf(outfile, " %d %f", fragment->rescued, fragment->dm);
-    }
+    else // individual variant format, for debugging
+	{
+    	    //fprintf(outfile,":%c",fragment->strand);
+	    for (i = 0; i < fragment->variants; i++) fprintf(outfile, " %d:%c:%d",fragment->alist[i].varid+1,fragment->alist[i].allele,(char)fragment->alist[i].qv-33);
+	}
     fprintf(outfile, "\n");
 
     return 0;
@@ -226,12 +238,11 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
 
 // sort the fragment list by 'mate-position or position of 2nd read' so that reads that are from the same DNA fragment are together
 // also takes care of overlapping paired-end reads to avoid duplicates in fragments
-
 void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int currchrom, int currpos, int prevchrom) {
     int i = 0, j = 0, k = 0, first = 0, sl = 0, bl = 0;
     FRAGMENT fragment;
     fragment.variants = 0;
-    fragment.alist = (allele*) malloc(sizeof (allele)*1000);
+    fragment.alist = (allele*) malloc(sizeof (allele)*16184);
     if (*fragments > 1) qsort(flist, *fragments, sizeof (FRAGMENT), compare_fragments);
     // sort such that mate pairs are together and reverse sorted by starting position of second read in a mate-piar
     //for (i=0;i<*fragments;i++) fprintf(stdout,"frag %s %d vars %d \n",flist[i].id,flist[i].alist[0].varid,flist[i].variants);
@@ -253,7 +264,7 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                 //fprintf(stdout,"mate-pair %s %s %s\n",flist[i].id);
                 if (flist[i].alist[flist[i].variants - 1].varid < flist[i + 1].alist[0].varid) print_matepair(&flist[i], &flist[i + 1], varlist, fragment_file);
                 else if (flist[i + 1].alist[flist[i + 1].variants - 1].varid < flist[i].alist[0].varid) print_matepair(&flist[i + 1], &flist[i], varlist, fragment_file);
-                else if (flist[i].variants + flist[i + 1].variants > 2) {
+                else if (flist[i].variants + flist[i + 1].variants >= 2) {
                     j = 0;
                     k = 0;
                     fragment.variants = 0;
@@ -301,7 +312,7 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                             k++;
                         }
                     }
-                    if (fragment.variants >= 2) {
+                    if (fragment.variants >= 2 || (SINGLEREADS ==1 && fragment.variants >=1)) {
                         sl = strlen(flist[i].id);
                         fragment.id = (char*) malloc(sl + 1);
                         for (j = 0; j < sl; j++) fragment.id[j] = flist[i].id[j];
@@ -324,14 +335,14 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                     }
 
                 }
-                else if (flist[i].variants+flist[i+1].variants ==2 && SINGLEREADS ==1)print_fragment(&flist[i],varlist,fragment_file); // added 05/31/2017 for OPE
+                else if (flist[i].variants+flist[i+1].variants ==2 && SINGLEREADS ==1 && flist[i].variants >= 1)print_fragment(&flist[i],varlist,fragment_file); // added 05/31/2017 for OPE
 
                 //else if (flist[i].variants ==1 && flist[i+1].variants >1) print_fragment(&flist[i+1],varlist);
                 //else if (flist[i].variants > 1 && flist[i+1].variants ==1) print_fragment(&flist[i],varlist);
                 // april 27 2012 these PE reads were being ignored until now
                 i += 2;
                 // what about overlapping paired-end reads.... reads..... ???? jan 13 2012,
-            } else if (flist[i].variants >= 2 || SINGLEREADS == 1) {
+            } else if (flist[i].variants >= 2 || (SINGLEREADS == 1 && flist[i].variants >=1)) {
                 print_fragment(&flist[i], varlist, fragment_file);
                 i++;
             } else i++;
@@ -339,11 +350,11 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
         }
         // last read examined if it is not paired
         if (i < *fragments) {
-            if (flist[i].variants >= 2 || SINGLEREADS == 1) print_fragment(&flist[i], varlist, fragment_file);
+            if (flist[i].variants >= 2 || (SINGLEREADS == 1 && flist[i].variants >=1)) print_fragment(&flist[i], varlist, fragment_file);
         }
     } else // only one fragment in fraglist single end
     {
-        if (flist[first].variants >= 2 || SINGLEREADS == 1) print_fragment(&flist[first], varlist, fragment_file);
+        if (flist[first].variants >= 2 || (SINGLEREADS == 1 && flist[i].variants >=1)) print_fragment(&flist[first], varlist, fragment_file);
     }
 
     // free the fragments starting from first....

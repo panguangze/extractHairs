@@ -17,7 +17,8 @@ extern int REALIGN_ALL;
 extern int VARIANTS;
 extern int PARSEINDELS;
 extern int* fcigarlist;
-
+extern int SUM_ALL_ALIGN;
+extern int HOMOZYGOUS;
 
  // max number of SNVs in a short haplotype
 // given a=log10(x) and b=log10(y), returns log10(x+y)

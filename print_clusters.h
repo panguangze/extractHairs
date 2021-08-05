@@ -5,6 +5,7 @@
 #include "hashtable.h"
 #include "hapfragments.h"
 
+extern int MIN_CLUSTER_DISTANCE;
 
 int get_chrom_name(struct alignedread* read, HASHTABLE* ht, REFLIST* reflist);
 

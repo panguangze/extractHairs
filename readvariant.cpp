@@ -651,14 +651,14 @@ void build_intervalmap(CHROMVARS* chromvars, int chromosomes, VARIANT* varlist, 
 }
 
 // this will only work for pure insertions and deletions, not for block substitutions
-
 int calculate_rightshift(VARIANT* varlist, int ss, REFLIST* reflist) {
     int i = 0, j = 0;
     int a1 = 0, a2 = 0;
     int shift = 0;
     a1 = strlen(varlist[ss].allele1);
     a2 = strlen(varlist[ss].allele2);
-    if (a1 > a2 && a2 == 1) {
+    if (a1 > a2 && a2 == 1)
+    {
         i = varlist[ss].position; // first base of deletion assuming position is +1 and not previous base
         j = varlist[ss].position + a1 - a2;
         while (i - 1 < reflist->lengths[reflist->current] && j - 1 < reflist->lengths[reflist->current] && reflist->sequences[reflist->current][i - 1] == reflist->sequences[reflist->current][j - 1]) {
@@ -666,8 +666,11 @@ int calculate_rightshift(VARIANT* varlist, int ss, REFLIST* reflist) {
             j++;
             shift++;
         }
+        varlist[ss].shift = shift;
         return shift;
-    } else if (a1 == 1 && a2 > a1) {
+    } 
+    else if (a1 == 1 && a2 > a1) 
+    {
         i = 1;
         j = varlist[ss].position;
         while (j - 1 < reflist->lengths[reflist->current] && varlist[ss].allele2[i] == reflist->sequences[reflist->current][j - 1] && i < a2) {
@@ -684,8 +687,14 @@ int calculate_rightshift(VARIANT* varlist, int ss, REFLIST* reflist) {
                 shift++;
             }
         }
+        varlist[ss].shift = shift;
         return shift;
-    } else return 0;
+    } 
+    else 
+	{
+		varlist[ss].shift=0;
+		return 0;
+	}
 }
 
 

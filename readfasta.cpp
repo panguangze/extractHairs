@@ -2,11 +2,12 @@
 #include<math.h>
 #include<stdlib.h>
 #include<string.h>
+#include<stdint.h>
 #include<ctype.h>
 #include<time.h>
 #include<zlib.h>
 
-#include "kseq.h"
+#include <htslib/kseq.h>
 KSEQ_INIT(gzFile, gzread)
 
 #include "readfasta.h"
@@ -193,33 +194,36 @@ int read_next_chromosome(REFLIST* reflist, int chrom, FILE* fp) {
     return 1;
 }
 
+// reads plain fasta or gzipped fasta files, only keeps those chromosomes that are relevant for parsing variants to reduce memory footprint
 int read_fasta(char* seqfile, REFLIST* reflist) {
     clock_t t;
     kseq_t *seq;
     gzFile fp = gzopen(seqfile, "r");
-    seq = kseq_init(fp);
     if (fp == NULL) {
         fprintf(stderr, "file %s not found \n", seqfile);
         return -1;
     }
-    fprintf(stderr, "reading reference sequence file %s with %d sequences\n", seqfile, reflist->ns);
+    seq = kseq_init(fp);
+    fprintf(stderr, "reading reference sequence file %s with %d contigs\n", seqfile, reflist->ns);
     t = clock();
     int i=0, j=0;
     while (kseq_read(seq) >= 0) {
         memcpy(reflist->sequences[i], seq->seq.s, seq->seq.l);
-        for (j = 0; j < seq->seq.l; j++) {
-            reflist->sequences[i][j] = toupper(reflist->sequences[i][j]);
-        }
+    if (reflist->used[i] ==1) // only keep those fasta sequences that are relevant for VCF (used = 1) 
+	{
+        	for (j = 0; j < seq->seq.l; j++) reflist->sequences[i][j] = toupper(reflist->sequences[i][j]);
+        	reflist->sequences[i][reflist->lengths[i]] = '\0';
+	}
+	else free(reflist->sequences[i]); 
+	//fprintf(stderr,"reflist %d used %d \n",i,reflist->used[i]);
         i++;
     }
+    kseq_destroy(seq);
     gzclose(fp); fp=NULL;
-    for (i = 0; i < reflist->ns; i++) {
-        reflist->sequences[i][reflist->lengths[i]] = '\0';
-        if (i < 10) {
-            fprintf(stderr, "%s %d ", reflist->names[i], reflist->lengths[i]);
-            for (j = 0; j < 30; j++) fprintf(stderr, "%c", reflist->sequences[i][j]);
-            fprintf(stderr, "\n");
-        }
+    for (i = 0; i < reflist->ns && i < 10; i++) {
+           //fprintf(stderr, "%s %d ", reflist->names[i], reflist->lengths[i]);
+           //for (j = 0; j < 30; j++) fprintf(stderr, "%c", reflist->sequences[i][j]);
+           //fprintf(stderr, "\n");
     }
     fprintf(stderr, "read reference sequence file in %.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
     return 1;

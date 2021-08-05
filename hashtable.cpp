@@ -1,4 +1,5 @@
 #include "hashtable.h"
+
 // this is a basic hashtable that was designed for mapping chromosomes to integers (chrx - 0) 
 //  used in extract_hairs for haplotype assembly as well as indel realignment 
 
@@ -30,8 +31,7 @@ int insert_keyvalue(HASHTABLE* ht, char* key, int slen, int value) {
     tempkey->value = value;
     tempkey->key = (char*) malloc(slen + 1);
     int i = 0;
-    for (i = 0; i < slen; i++)
-        tempkey->key[i] = key[i];
+    for (i = 0; i < slen; i++) tempkey->key[i] = key[i];
     tempkey->key[i] = '\0';
     tempkey->next = ht->blist[hash];
     ht->blist[hash] = tempkey;
@@ -48,6 +48,7 @@ int getindex(HASHTABLE* ht, char* chrom) {
     }
     return -1;
 }
+
 
 int update_value(HASHTABLE* ht, char* key, int value) {
     int hash = hashstring(key, ht->htsize);

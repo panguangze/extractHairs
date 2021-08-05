@@ -1,10 +1,4 @@
-// author: Vikas Bansal, vbansal@scripps, 2011-2012
 //  program to extract haplotype informative reads from sorted BAM file, input requirements: bamfile and variantfile
-//  Jan 13 2012, changed to read directly from BAM file
-//  paired-end overlapping reads need to be handled properly
-//  add module for RNA-seq data as well
-//  add flag for secondary alignments and PCR duplicates (picard mark duplicates)
-//  input format for variants should be VCF from now
 //#include "extracthairs.h"
 #include<stdio.h>
 #include<stdlib.h>
@@ -40,6 +34,7 @@ int PARSEBND= 0;
 int SINGLEREADS = 0;
 int LONG_READS = 0;
 int REALIGN_VARIANTS = 0;
+int ESTIMATE_PARAMS = 0; // estimate realignment parameters from BAM 
 int MINBNDIS = 0;
 //int QVoffset = 33; declared in samread.h
 FILE* logfile;
@@ -50,6 +45,10 @@ FILE* fragment_file;
 int TRI_ALLELIC = 0;
 int VERBOSE = 0;
 bool VCF_PHASED = false;
+int PACBIO = 0; 
+int USE_SUPP_ALIGNMENTS =0; // use supplementary alignments, flag = 2048
+int SUM_ALL_ALIGN =0; // if set to 1, use sum of all alignments scoring forr local realignment 
+int HOMOZYGOUS = 0; // also output alleles for homozygous variants, by default such variants are ignored
 
 int* fcigarlist; // global variable
 
@@ -60,9 +59,11 @@ float INSERTION_EXTEND = -1;
 float DELETION_OPEN = -1;
 float DELETION_EXTEND = -1;
 
+
 // DATA TYPE
 // 0 : generic reads
 // 1 : HiC
+// 2: 10X ??
 int DATA_TYPE = 0;
 
 // NEW FORMAT FOR HIC
@@ -72,11 +73,19 @@ int DATA_TYPE = 0;
 // column 5 is the absolute insert size
 int NEW_FORMAT = 0;
 
+int PRINT_COMPACT = 1; // 1= print each fragment block by block, 0 = print variant by variant
+
 //int get_chrom_name(struct alignedread* read,HASHTABLE* ht,REFLIST* reflist);
 
 #include "parsebamread.h"
 #include "realignbamread.h"
 #include "fosmidbam_hairs.h" // code for parsing fosmid pooled sequence data
+#include "estimate_hmm_params.h"
+#include "realign_pairHMM.h" // added 11/29/2018
+
+//#include "fosmidbam_hairs.c" // code for parsing fosmid pooled sequence data
+
+Align_Params* AP; // global alignmnet params
 
 //disabled sam file reading
 //#include "samhairs.c" // has two functions that handle sam file parsing
@@ -106,10 +115,14 @@ void print_options() {
     fprintf(stderr, "--breakends <0/1> : extract reads spanning break end, default is 0, variants need to specified in VCF format to use this option\n");
     fprintf(stderr, "--fosmid <0/1> : extract reads with fosmid pool library preparation, default 0, specified if you are using mate-pair seqeuncing. \n");
     fprintf(stderr, "--noquality <INTEGER> : if the bam file does not have quality string, this value will be used as the uniform quality value, default 0 \n");
-    //fprintf(stderr,"--triallelic <0/1> : print information about , default 0 \n");
-    fprintf(stderr, "--ref <FILENAME> : reference sequence file (in fasta format), optional but required for indels, should be indexed using samtools\n");
+    fprintf(stderr,"--triallelic <0/1> : include variants with genotype 1/2 for parsing, default 0 \n");
+	fprintf(stderr, "--ref <FILENAME> : reference sequence file (in fasta format), optional but required for indels, should be indexed using samtools\n");
     fprintf(stderr, "--out <FILENAME> : output filename for haplotype fragments, if not provided, fragments will be output to stdout\n");
     fprintf(stderr, "--vcf-phased <0/1>: if the input vcf has been phased, then we will filter reads according to phasing info\n\n");
+    //fprintf(stderr, "--region <chr:start-end> : chromosome and region in BAM file, useful to process individual chromosomes or genomic regions \n");
+    fprintf(stderr, "--ep <0/1> : set to 1 to estimate HMM parameters from aligned reads (only with long reads), default = 0\n");
+	fprintf(stderr, "--hom <0/1> : set to 1 to include homozygous variants for processing, default = 0 (only heterozygous) \n\n");
+	//fprintf(stderr, "--sumall <0/1> : set to 1 to use sum of all local alignments approach (only with long reads), default = 1 \n\n");
     //fprintf(stderr,"--out : output file for haplotype informative fragments (hairs)\n\n");
 }
 
@@ -128,9 +141,11 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     int reads = 0;
     struct alignedread* read = (struct alignedread*) malloc(sizeof (struct alignedread));
 
-    if (REALIGN_VARIANTS){
-        fcigarlist = (int *) calloc(sizeof(int),400000);
-    }
+    int rvalue =0;
+	// estimate alignment parameters from BAM file ONT/pacbio reads only 12/3/18
+	if (REALIGN_VARIANTS && ESTIMATE_PARAMS) rvalue = realignment_params(bamfile,reflist,NULL,AP); 
+	if (rvalue < -1) return -1;
+    if (REALIGN_VARIANTS) fcigarlist = (int *) calloc(sizeof(int),400000);
     int i = 0;
     int chrom = 0; //int sl=0;
     // int v1,v2;
@@ -138,11 +153,11 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     int prevtid = -1;
 
     FRAGMENT* flist = (FRAGMENT*) malloc(sizeof (FRAGMENT) * MAXFRAG);
-    int fragments = 0;
+    int fragments = 0,VOfragments[2]={0,0}; // fragments overlapping variants
     int prevfragments = 0;
     FRAGMENT fragment;
     fragment.variants = 0;
-    fragment.alist = (allele*) malloc(sizeof (allele)*10000);
+    fragment.alist = (allele*) malloc(sizeof (allele)*16184);
 
     samFile *fp;
     if ((fp = sam_open(bamfile, "rb")) == 0) {
@@ -161,10 +176,13 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         }
         // find the chromosome in reflist that matches read->chrom if the previous chromosome is different from current chromosome
         if (read->tid != prevtid) {
-            chrom = getindex(ht, read->chrom); // this will return -1 if the contig name is not  in the VCF file 
+        chrom = getindex(ht,read->chrom);  // this will return -1 if the contig name is not  in the VCF file 
 	    if (chrom < 0) fprintf(stderr,"chrom \"%s\" not in VCF file, skipping all reads for this chrom.... \n",read->chrom);
-	    else fprintf(stderr,"processing reads mapped to chrom \"%s\" \n",read->chrom);
-		// doing this for every read, can replace this by string comparison ..april 4 2012
+	    else 
+        {
+            fprintf(stderr,"processing reads mapped to chrom \"%s\" \n",read->chrom);
+		}
+        // doing this for every read, can replace this by string comparison ..april 4 2012
             i = read->tid;
             if (reflist->ns > 0) {
                 reflist->current = i;
@@ -181,11 +199,13 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         } else chrom = prevchrom;
         //if (chrom_missing_index ==1) { prevtid = read->tid; free_readmemory(read); continue; } 
 
+
         fragment.absIS = (read->IS < 0) ? -1 * read->IS : read->IS;
         // add check to see if the mate and its read are on same chromosome, bug for contigs, july 16 2012
         if ((read->flag & 8) || fragment.absIS > MAX_IS || fragment.absIS < MIN_IS || read->IS == 0 || !(read->flag & 1) || read->tid != read->mtid) // single read
         {
             fragment.variants = 0; // v1 =0; v2=0;
+            if ( (read->flag & 16) ==16) fragment.strand = '-'; else fragment.strand = '+';
             if (chrom >= 0 && PEONLY == 0) {
 
                 fragment.id = read->readid;
@@ -198,10 +218,9 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 }else{
                     extract_variants_read(read,ht,chromvars,varlist,0,&fragment,chrom,reflist);
                 }
-                if (fragment.variants >= 2 || (SINGLEREADS == 1 && fragment.variants >= 1)) {
-                    // instead of printing fragment, we could change this to update genotype likelihoods
-                    print_fragment(&fragment, varlist, fragment_file);
-                }
+                if (fragment.variants >=2) VOfragments[0]++;
+				else if (fragment.variants >=1) VOfragments[1]++;
+                if (fragment.variants >= 2 || (SINGLEREADS == 1 && fragment.variants >= 1)) print_fragment(&fragment, varlist, fragment_file);
             }
         } else // paired-end read
         {
@@ -225,9 +244,6 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 }
             }
         }
-        // BUG here when the fragment list cannot be cleaned due to long mate-pair fragments (accumulated for large IS)
-        // fragments >= 100000 and we will clean it repeatedly...
-        // need to fix this june 4 2012.... even for long mate-pairs this could be a problem...
         if ((fragments - prevfragments >= 100000) || fragments >= MAXFRAG - 10000 || (chrom != prevchrom && prevchrom != -1 && fragments > 0)) // chrom of current read is not the same as previous read's chromosome...
         {
             if (PFLAG == 1 && chrom == prevchrom) fprintf(stderr, "cleaning buffer: current chrom %s position %d fragments %d\n", read->chrom, read->position, fragments);
@@ -238,7 +254,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         }
 
         reads += 1;
-        if (reads % 2000000 == 0 && chrom >=0){
+        if ( (reads % 2000000 == 0 && chrom >=0) || (PACBIO ==1 && reads % 20000==0 && chrom >= 0) ) {
             fprintf(stderr, "processed %d reads", reads);
             if (DATA_TYPE != 2) fprintf(stderr, ", paired end fragments %d", fragments);
             fprintf(stderr, "\n");
@@ -255,9 +271,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     bam_destroy1(b);
     bam_hdr_destroy(header);
     free(flist); free(read); free(fragment.alist);
-    if (REALIGN_VARIANTS){
-        free(fcigarlist);
-    }
+    if (REALIGN_VARIANTS) free(fcigarlist);
     return 0;
 }
 
@@ -270,7 +284,6 @@ int main(int argc, char** argv) {
     strcpy(bamfile, "None");
     strcpy(variantfile, "None");
     strcpy(fastafile, "None");
-    GROUPNAME = NULL;
     int readsorted = 0;
     char* sampleid = (char*) malloc(1024);
     sampleid[0] = '-';
@@ -288,6 +301,8 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
+    AP = init_params();
+
     for (i = 1; i < argc; i += 2) {
         if (strcmp(argv[i], "--bam") == 0 || strcmp(argv[i], "--bamfile") == 0) bamfiles++;
         else if (strcmp(argv[i], "--variants") == 0) strcpy(variantfile, argv[i + 1]);
@@ -299,7 +314,6 @@ int main(int argc, char** argv) {
             check_input_0_or_1(argv[i + 1]);
             readsorted = atoi(argv[i + 1]);
         }
-        else if (strcmp(argv[i], "--mbq") == 0) MINQ = atoi(argv[i + 1]);
         else if (strcmp(argv[i], "--mmq") == 0) MIN_MQ = atoi(argv[i + 1]);
         else if (strcmp(argv[i], "--HiC") == 0 || strcmp(argv[i], "--hic") == 0){
             check_input_0_or_1(argv[i + 1]);
@@ -321,10 +335,11 @@ int main(int argc, char** argv) {
             if (atoi(argv[i + 1])){
                 REALIGN_VARIANTS = 1;
             }
-        }else if (strcmp(argv[i], "--pacbio") == 0){
+        }else if (strcmp(argv[i], "--pacbio") == 0 || strcmp(argv[i], "--SMRT") == 0 || strcmp(argv[i],"--pb") ==0){
             check_input_0_or_1(argv[i + 1]);
             if (atoi(argv[i + 1])){
-                REALIGN_VARIANTS = 1;
+                REALIGN_VARIANTS = 1; PACBIO =1; MINQ = 4;
+				SUM_ALL_ALIGN = 1;             
             }
 
             // scores based on https://www.researchgate.net/figure/230618348_fig1_Characterization-of-Pacific-Biosciences-dataa-Base-error-mode-rate-for-deletions
@@ -336,10 +351,11 @@ int main(int argc, char** argv) {
             INSERTION_EXTEND = log10(0.26);
             DELETION_EXTEND = log10(0.12);
 
+
         }else if (strcmp(argv[i], "--ont") == 0 || strcmp(argv[i], "--ONT") == 0){
             check_input_0_or_1(argv[i + 1]);
             if (atoi(argv[i + 1])){
-                REALIGN_VARIANTS = 1;
+                REALIGN_VARIANTS = 1;  MINQ = 4;
             }
             // scores based on http://www.nature.com/nmeth/journal/v12/n4/abs/nmeth.3290.html
             MATCH = log10(1.0 - (0.051 + 0.049 + 0.078));
@@ -348,6 +364,7 @@ int main(int argc, char** argv) {
             INSERTION_EXTEND = log10(0.25); // this number has no basis in anything
             DELETION_OPEN = log10(0.078);
             DELETION_EXTEND = log10(0.25); // this number also has no basis in anything
+            SUM_ALL_ALIGN = 1; 
 
         }else if (strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "--v") == 0){
             check_input_0_or_1(argv[i + 1]);
@@ -359,6 +376,8 @@ int main(int argc, char** argv) {
             MAX_IS = atoi(argv[i + 1]);
         else if (strcmp(argv[i], "--minIS") == 0)
             MIN_IS = atoi(argv[i + 1]);
+        else if (strcmp(argv[i], "--fullprint") == 0)
+			PRINT_COMPACT = atoi(argv[i + 1]);
         else if (strcmp(argv[i], "--PEonly") == 0){
             check_input_0_or_1(argv[i + 1]);
             PEONLY = atoi(argv[i + 1]); // discard single end mapped reads
@@ -380,6 +399,13 @@ int main(int argc, char** argv) {
             check_input_0_or_1(argv[i + 1]);
             SINGLEREADS = atoi(argv[i + 1]);
         }else if (strcmp(argv[i], "--maxfragments") == 0) MAXFRAG = atoi(argv[i + 1]);
+        else if (strcmp(argv[i], "--hom") == 0) 
+		{
+			check_input_0_or_1(argv[i + 1]);
+			HOMOZYGOUS = atoi(argv[i + 1]);
+			if (HOMOZYGOUS ==1) SINGLEREADS = 1; 
+		}
+         else if (strcmp(argv[i], "--mbq") == 0) MINQ = atoi(argv[i + 1]);
         else if (strcmp(argv[i], "--noquality") == 0){
             check_input_0_or_1(argv[i + 1]);
             MISSING_QV = atoi(argv[i + 1]);
@@ -394,6 +420,11 @@ int main(int argc, char** argv) {
             strcpy(GROUPNAME, argv[i + 1]);
         }else if (strcmp(argv[i], "--vcf-phased") == 0) {
             if (strcmp(argv[i+1], "0") != 0) VCF_PHASED = true;
+        }else if (strcmp(argv[i], "--sumall") == 0) { 
+			SUM_ALL_ALIGN = atoi(argv[i+1]); 
+			if (SUM_ALL_ALIGN >=1) fprintf(stderr, "\nusing sum of all alignments for scoring \n");
+		}else if (strcmp(argv[i], "--ep") == 0) { 
+			ESTIMATE_PARAMS = atoi(argv[i+1]); 
         }else{
             fprintf(stderr, "\nERROR: Invalid Option \"%s\" specified.\n",argv[i]);
             exit(1);
@@ -403,6 +434,10 @@ int main(int argc, char** argv) {
         fprintf(stderr, "\nERROR: In order to realign variants (including --pacbio and --ont options), reference fasta file must be provided with --ref option.\n");
         exit(1);
     }
+    if (MINQ < 4) {
+		fprintf(stderr, "\nERROR: MINQ must be at least 4.\n");
+		exit(1);
+	}
     if (bamfiles > 0 && strcmp(variantfile, "None") != 0) {
         bamfilelist = (char**) malloc(sizeof (char*)*bamfiles);
         for (i = 0; i < bamfiles; i++) bamfilelist[i] = (char*) malloc(1024);
@@ -440,18 +475,17 @@ int main(int argc, char** argv) {
     CHROMVARS* chromvars = (CHROMVARS*) malloc(sizeof (CHROMVARS) * chromosomes);
     build_intervalmap(chromvars, chromosomes, varlist, VARIANTS);
 
-    // read reference fasta file for INDELS, currently reads entire genome in one go, need to modify to read chromosome by chromosome
-    REFLIST* reflist = (REFLIST*) malloc(sizeof (REFLIST));
-    reflist->ns = 0;
-    reflist->names = NULL;
-    reflist->lengths = NULL;
-    reflist->sequences = NULL;
-    reflist->current = -1;
+    // read reference fasta file for INDELS, reads entire genome in one shot but saves memory by only keep contigs that are relevant for VCF parsing
+	REFLIST* reflist = (REFLIST*) malloc(sizeof (REFLIST));
+    reflist->ns = 0; reflist->names = NULL; reflist->lengths = NULL; reflist->sequences = NULL; reflist->current = -1;
     if (strcmp(fastafile, "None") != 0) {
         if (read_fastaheader(fastafile, reflist) > 0) {
             reflist->sequences = (unsigned char **) calloc(reflist->ns, sizeof (unsigned char*)); //(char**)malloc(sizeof(char*)*reflist->ns);
             for (i = 0; i < reflist->ns; i++) {
                 reflist->sequences[i] = (unsigned char *) calloc(reflist->lengths[i] + 1, sizeof (unsigned char));
+                int chrom = getindex(&ht, reflist->names[i]); reflist->used[i] = 1;
+				if (chrom >=0) fprintf(stderr,"found match for reference contig %s in VCF file index \n",reflist->names[i]); 
+				else reflist->used[i] = 0; // memory for this chromosome will be freed 
                 if (i < 5) fprintf(stderr, "contig %s length %d\n", reflist->names[i], reflist->lengths[i]);
             }
             read_fasta(fastafile, reflist);
@@ -471,21 +505,22 @@ int main(int argc, char** argv) {
 
     for (i=0;i<reflist->ns;i++){
 		free(reflist->names[i]);
-		free(reflist->sequences[i]);
+		if (reflist->used[i] ==1) free(reflist->sequences[i]);
 	}
-	free(reflist->names);
-	free(reflist->sequences);
-	free(reflist->lengths);
+    if (reflist->ns > 0) { 
+	    free(reflist->names);
+	    free(reflist->sequences);
+	    free(reflist->lengths);
+        free(reflist->used);
+    }
 	//free(reflist->offsets);
-
+    //int xor = pow(2,16)-1; int c=0;
 	for (i=0;i<variants;i++){
-		free(varlist[i].genotype);
-		free(varlist[i].RA);
-		free(varlist[i].AA);
-		free(varlist[i].chrom);
+        //fprintf(stderr,"variant %d %s %d cov %d %s %s ",i+1,varlist[i].genotype,varlist[i].position,varlist[i].depth,varlist[i].RA,varlist[i].AA);
+		//fprintf(stderr,"REF(strand) %d:%d ALT %d:%d\n",varlist[i].A1>>16,varlist[i].A1 & xor,varlist[i].A2>>16,varlist[i].A2 & xor);
+		free(varlist[i].genotype); free(varlist[i].RA);     free(varlist[i].AA);free(varlist[i].chrom);
         if (varlist[i].heterozygous == '1'){
-            free(varlist[i].allele1);
-            free(varlist[i].allele2);
+            free(varlist[i].allele1); free(varlist[i].allele2);
         }
 	}
 
@@ -493,7 +528,6 @@ int main(int argc, char** argv) {
 		free(chromvars[i].intervalmap);
 	}
 	free(chromvars);
-
 	free(sampleid); free(varlist); free(reflist);
 	if (bamfiles > 0 && strcmp(variantfile,"None") !=0){
 		for (i=0;i<bamfiles;i++)

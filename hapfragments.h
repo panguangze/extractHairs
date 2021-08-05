@@ -11,6 +11,7 @@
 extern int SINGLEREADS;
 extern int DATA_TYPE;
 extern int NEW_FORMAT;
+extern int PRINT_COMPACT; // default = 1
 
 typedef struct {
     char allele;
@@ -28,6 +29,7 @@ typedef struct {
     int matepos;
     int absIS;
     char* barcode;
+    char strand; // added 01/26/2018
     int rescued;
     float dm;
 } FRAGMENT;

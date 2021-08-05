@@ -50,6 +50,7 @@ typedef struct {
     int depth;
     int A1, A2;
     int H1, H2;
+    int shift; // for indels in low-complexity sequence, rightshift in variant posiiton
     int bnd; 
     int bnd_pair_distance;  // distance between a pair of bnd 
     int bnd_type;
