@@ -19,6 +19,7 @@ extern int TRI_ALLELIC;
 extern int BSIZE;
 extern int PRINT_FRAGMENTS;
 extern bool VCF_PHASED;
+extern int STDBND;
 extern int MINBNDIS;
 //int VARIANTS = 0;
 
@@ -54,7 +55,9 @@ typedef struct {
     int bnd; 
     int bnd_pair_distance;  // distance between a pair of bnd 
     int bnd_type;
-    int bnd_direction;    
+    int bnd_direction;
+    int bnd_mate_pos;
+    char* bnd_mate_chrom;
     
     // total reads covering this variant (haploid/diploid, A1-> reads supporting reference allele (single-read)
     //	float L11,L12,L22; // genotype likelihoods for three possible genotypes

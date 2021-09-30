@@ -256,39 +256,39 @@ int parse_variant(VARIANT* variant, char* buffer, int samplecol) {
 
 // change this to VCF file now
 
-int read_variantfile(char* vcffile, VARIANT* varlist, HASHTABLE* ht, int* hetvariants, int samplecol) {
-    FILE* fp = fopen(vcffile, "r");
-    char buffer[500000];
-    int i = 0;
-    //	char allele1[256]; char allele2[256]; char genotype[256]; int quality;
-    char prevchrom[256];
-    strcpy(prevchrom, "----");
-    int chromosomes = 0; //int blocks=0;
-    *hetvariants = 0;
-    int het = 0;
-
-    while (fgets(buffer, 500000, fp)) {
-        if (buffer[0] == '#') continue;
-        else {
-            het = parse_variant(&varlist[i], buffer, samplecol);
-            (*hetvariants) += het;
-            //if (het ==0) continue; else (*hetvariants)++;
-            //	fprintf(stdout,"%s %d %s %s %s %s\n",varlist[i].chrom,varlist[i].position,varlist[i].RA,varlist[i].AA,varlist[i].genotype,prevchrom);
-            if (strcmp(varlist[i].chrom, prevchrom) != 0) {
-                //	fprintf(stderr,"chromosomes %d %d\n",chromosomes,i);
-                // insert chromname into hashtable
-                insert_keyvalue(ht, varlist[i].chrom, strlen(varlist[i].chrom), chromosomes);
-                strcpy(prevchrom, varlist[i].chrom);
-                chromosomes++;
-            }
-            i++;
-        }
-    }
-    fclose(fp); //chromosomes--;
-    fprintf(stderr, "vcffile %s chromosomes %d hetvariants %d %d\n", vcffile, chromosomes, *hetvariants, i);
-    return chromosomes;
-
-}
+//int read_variantfile(char* vcffile, VARIANT* varlist, HASHTABLE* ht, int* hetvariants, int samplecol) {
+//    FILE* fp = fopen(vcffile, "r");
+//    char buffer[500000];
+//    int i = 0;
+//    //	char allele1[256]; char allele2[256]; char genotype[256]; int quality;
+//    char prevchrom[256];
+//    strcpy(prevchrom, "----");
+//    int chromosomes = 0; //int blocks=0;
+//    *hetvariants = 0;
+//    int het = 0;
+//
+//    while (fgets(buffer, 500000, fp)) {
+//        if (buffer[0] == '#') continue;
+//        else {
+//            het = parse_variant(&varlist[i], buffer, samplecol);
+//            (*hetvariants) += het;
+//            //if (het ==0) continue; else (*hetvariants)++;
+//            //	fprintf(stdout,"%s %d %s %s %s %s\n",varlist[i].chrom,varlist[i].position,varlist[i].RA,varlist[i].AA,varlist[i].genotype,prevchrom);
+//            if (strcmp(varlist[i].chrom, prevchrom) != 0) {
+//                //	fprintf(stderr,"chromosomes %d %d\n",chromosomes,i);
+//                // insert chromname into hashtable
+//                insert_keyvalue(ht, varlist[i].chrom, strlen(varlist[i].chrom), chromosomes);
+//                strcpy(prevchrom, varlist[i].chrom);
+//                chromosomes++;
+//            }
+//            i++;
+//        }
+//    }
+//    fclose(fp); //chromosomes--;
+//    fprintf(stderr, "vcffile %s chromosomes %d hetvariants %d %d\n", vcffile, chromosomes, *hetvariants, i);
+//    return chromosomes;
+//
+//}
 
 //TODO: clarify between 1/2 genotyped breakend and breakend with multiple mate, they both have two fields in alt alleles. might cause a bug
 // now we don't consider multiple mate yet
@@ -299,66 +299,67 @@ int parse_bnd(VARIANT *variant)
         fprintf(stderr, "bug here at position %i", variant->position);
         exit(1);
     }
-    char *ori_bnd_str = variant->allele2;
-    char *bnd_str = (char*) malloc(strlen(variant->allele2) + 1);
-    strcpy(bnd_str, variant->allele2);
-    char *chrom = variant->chrom;
-    char *pch;
-    pch = strtok(bnd_str, "][:");
-    char *mate_chrom;
-    char *mate_pos;
-    
-    if (strchr(ori_bnd_str, '[') != NULL) 
-    {
-        if (ori_bnd_str[0] == '[')
-        {
-            variant->bnd_direction = BNDDIRECT_PRT; // [p[t
-            mate_chrom = pch;
-            mate_pos = strtok(NULL, "][:");
-        }
-        else {
-            variant->bnd_direction = BNDDIRECT_TRP; // t[p[
-            mate_chrom = strtok(NULL, "][:");
-            mate_pos = strtok(NULL, "][:");
-        } 
-    }
-    else if (strchr(ori_bnd_str, ']') != NULL)
-    {
-        if (ori_bnd_str[0] == ']')
-        {
-            variant->bnd_direction = BNDDIRECT_PLT; // ]p]t
-            mate_chrom = pch;
-            mate_pos = strtok(NULL, "][:");
-        }
-        else {
-            variant->bnd_direction = BNDDIRECT_TLP; // t]p]
-            mate_chrom = strtok(NULL, "][:");
-            mate_pos = strtok(NULL, "][:");
-        }
-    }
+    if (STDBND) {
+        variant->bnd_mate_chrom = variant->chrom;
+        variant->bnd_type = BNDTYPE_PAIRED;
+    } else {
+        char *ori_bnd_str = variant->allele2;
+        char *bnd_str = (char*) malloc(strlen(variant->allele2) + 1);
+        strcpy(bnd_str, variant->allele2);
+        char *pch;
+        pch = strtok(bnd_str, "][:");
 
-    else {
-        //single breakend
-        variant->bnd_type = BNDTYPE_SINGLE_END;
-        variant->bnd_pair_distance = -1;
+        if (strchr(ori_bnd_str, '[') != NULL)
+        {
+            if (ori_bnd_str[0] == '[')
+            {
+                variant->bnd_direction = BNDDIRECT_PRT; // [p[t
+                variant->bnd_mate_chrom = pch;
+                variant->bnd_mate_pos = atoi(strtok(NULL, "][:"));
+            }
+            else {
+                variant->bnd_direction = BNDDIRECT_TRP; // t[p[
+                variant->bnd_mate_chrom = strtok(NULL, "][:");
+                variant->bnd_mate_pos = atoi(strtok(NULL, "][:"));
+            }
+        }
+        else if (strchr(ori_bnd_str, ']') != NULL)
+        {
+            if (ori_bnd_str[0] == ']')
+            {
+                variant->bnd_direction = BNDDIRECT_PLT; // ]p]t
+                variant->bnd_mate_chrom = pch;
+                variant->bnd_mate_pos = atoi(strtok(NULL, "][:"));
+            }
+            else {
+                variant->bnd_direction = BNDDIRECT_TLP; // t]p]
+                variant->bnd_mate_chrom = strtok(NULL, "][:");
+                variant->bnd_mate_pos = atoi(strtok(NULL, "][:"));
+            }
+        }
+
+        else {
+            //single breakend
+            variant->bnd_type = BNDTYPE_SINGLE_END;
+            variant->bnd_pair_distance = -1;
+        }
+        free(bnd_str);
     }
 
     if (variant->bnd_type != BNDTYPE_SINGLE_END)  
     {
         variant->bnd_type = BNDTYPE_PAIRED;
-        variant->bnd_pair_distance = atoi(mate_pos) - variant->position;
+        variant->bnd_pair_distance = variant->bnd_mate_pos - variant->position;
         if (variant->bnd_pair_distance < 0) 
             variant->bnd_pair_distance *= -1;
 
-        if (strcmp(mate_chrom, chrom) != 0)
+        if (strcmp(variant->bnd_mate_chrom, variant->chrom) != 0)
         {    
             variant->bnd_type = BNDTYPE_INTRA_CHROMOSOME;
             variant->bnd_pair_distance = -1;
         }
     }
-    
-    fprintf(stderr, "BND\t%d\t%d\n", variant->position, atoi(mate_pos));
-    free(bnd_str);
+    fprintf(stderr, "BND\t%d\t%d\n", variant->position, variant->bnd_mate_pos);
     return 0;
 }
 
@@ -434,11 +435,12 @@ int parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
     if (ninfo < 0)
         variant->bnd = 0;
     else {
-        if (strcmp(info, "BND") == 0)
-        {    
-            variant->bnd = 1;
-        }
-        else    variant->bnd = 0;
+        variant->bnd = 1;
+//        if (strcmp(info, "BND") == 0)
+//        {
+//            variant->bnd = 1;
+//        }
+//        else    variant->bnd = 0;
     }
 
     free(info);
@@ -505,6 +507,12 @@ int parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
                 variant->position++; // add one to position for indels
         }
         else {
+            int end_info;
+            int end_info_arr = 0;
+            ninfo = bcf_get_info_string(header, record, "AC", &end_info, &end_info_arr);
+            if (ninfo != 0)
+                variant->bnd_mate_pos = end_info;
+//            free(end_info);
             parse_bnd(variant);
         }
         
@@ -588,7 +596,9 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
         bcf_unpack(record, BCF_UN_ALL);
         het = parse_variant_hts(&varlist[i], record, header);
         (*hetvariants) += het;
-            //if (het ==0) continue; else (*hetvariants)++;
+        auto tmp = varlist[i];
+
+        //if (het ==0) continue; else (*hetvariants)++;
             //	fprintf(stdout,"%s %d %s %s %s %s\n",varlist[i].chrom,varlist[i].position,varlist[i].RA,varlist[i].AA,varlist[i].genotype,prevchrom);
         if (strcmp(varlist[i].chrom, prevchrom) != 0) {
                 //	fprintf(stderr,"chromosomes %d %d\n",chromosomes,i);

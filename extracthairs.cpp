@@ -31,6 +31,7 @@ int VARIANTS = 0;
 int VCFformat = 0;
 int PARSEINDELS = 0;
 int PARSEBND= 0;
+int STDBND = 0;
 int SINGLEREADS = 0;
 int LONG_READS = 0;
 int REALIGN_VARIANTS = 0;
@@ -113,6 +114,7 @@ void print_options() {
     fprintf(stderr, "--PEonly <0/1> : do not use single end reads, default is 0 (use all reads)\n");
     fprintf(stderr, "--indels <0/1> : extract reads spanning INDELS, default 0, variants need to specified in VCF format to use this option\n");
     fprintf(stderr, "--breakends <0/1> : extract reads spanning break end, default is 0, variants need to specified in VCF format to use this option\n");
+    fprintf(stderr, "--std_bnd <0/1> : extract reads spanning break end, default is 0, variants need to specified in VCF format to use this option\n");
     fprintf(stderr, "--fosmid <0/1> : extract reads with fosmid pool library preparation, default 0, specified if you are using mate-pair seqeuncing. \n");
     fprintf(stderr, "--noquality <INTEGER> : if the bam file does not have quality string, this value will be used as the uniform quality value, default 0 \n");
     fprintf(stderr,"--triallelic <0/1> : include variants with genotype 1/2 for parsing, default 0 \n");
@@ -386,7 +388,10 @@ int main(int argc, char** argv) {
             PARSEINDELS = atoi(argv[i + 1]); // allow indels in hairs
         }else if (strcmp(argv[i], "--breakends") == 0){
             check_input_0_or_1(argv[i + 1]);
-            PARSEBND = atoi(argv[i + 1]); // allow indels in hairs
+            PARSEBND = atoi(argv[i + 1]); // parse bnd support
+        }else if (strcmp(argv[i], "--std_bnd") == 0){
+            check_input_0_or_1(argv[i + 1]);
+            STDBND = atoi(argv[i + 1]); // if standard vcf bnd
         }else if (strcmp(argv[i], "--pflag") == 0){
             check_input_0_or_1(argv[i + 1]);
             IFLAG = atoi(argv[i + 1]); // allow indels in hairs
