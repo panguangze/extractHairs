@@ -235,6 +235,14 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
     return 0;
 }
 
+int print_mate_bnd_fragment(std::unordered_map<char*, std::pair<int, int>> & BNDs, FILE* outfile){
+    for (auto bnd: BNDs) {
+//        1 SRR3760936.8700_MP 16 000 77A 60
+        for (int i = 0; i < 3; i++)
+            fprintf(outfile, "2 BND %d 1 %d 1 77A 60",bnd.second.first, bnd.second.second);
+    }
+    return 1;
+}
 
 // sort the fragment list by 'mate-position or position of 2nd read' so that reads that are from the same DNA fragment are together
 // also takes care of overlapping paired-end reads to avoid duplicates in fragments

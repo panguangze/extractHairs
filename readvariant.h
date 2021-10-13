@@ -11,6 +11,7 @@
 
 #include <htslib/vcf.h>
 #include <htslib/tbx.h>
+#include <unordered_map>
 
 extern FILE* fragment_file; // FILE to which the fragments will be output, if NULL, output to stdout
 
@@ -38,6 +39,7 @@ typedef struct {
     char* id;           //variant id
     char* chrom;        //chromomsome 
     int position;       //pos
+    int ss; // pos in vcf file
     short altalleles;   //alt allele no.
     char* RA;  // reference alleles
     char* AA; // alternate alleles
@@ -52,7 +54,8 @@ typedef struct {
     int A1, A2;
     int H1, H2;
     int shift; // for indels in low-complexity sequence, rightshift in variant posiiton
-    int bnd; 
+    int bnd;
+    int bnd_pos; // pos for BND
     int bnd_pair_distance;  // distance between a pair of bnd 
     int bnd_type;
     int bnd_direction;
@@ -100,7 +103,7 @@ int parse_variant_hts(VARIANT* variant, const bcf1_t * record, const bcf_hdr_t *
 
 int read_variantfile(char* vcffile, VARIANT* varlist, HASHTABLE* ht, int* hetvariants, int samplecol);
 
-int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *hetvariants);
+int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *hetvariants, std::unordered_map<char*,std::pair<int, int>>& BNDs);
 
 void build_intervalmap(CHROMVARS* chromvars, int chromosomes, VARIANT* varlist, int variants);
 

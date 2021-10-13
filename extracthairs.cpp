@@ -6,6 +6,7 @@
 #include<math.h>
 #include<string.h>
 #include<limits.h>
+#include <unordered_map>
 //#define _GNU_SOURCE
 #include <htslib/sam.h>
 
@@ -460,13 +461,14 @@ int main(int argc, char** argv) {
     ht.htsize = 7919;
     init_hashtable(&ht); // chromosome names are inserted into hashtable from VCF file, ideally this should be done using BAM file header to avoid missing some contigs/chroms
     VARIANT* varlist;
+    std::unordered_map<char *, std::pair<int,int>> BNDs;
     int chromosomes = 0;
 
     if (VCFformat == 1) {
         variants = count_variants_hts(variantfile, sampleid, &samplecol);
         if (variants < 0) return -1;
         varlist = (VARIANT*) malloc(sizeof (VARIANT) * variants);
-        chromosomes = read_variantfile_hts(variantfile, varlist, &ht, &hetvariants);
+        chromosomes = read_variantfile_hts(variantfile, varlist, &ht, &hetvariants, BNDs);
     } else {
         fprintf(stderr, "\nError: This refined version of extractHairs only support vcf formatted file\n");
         return -1;
@@ -540,5 +542,7 @@ int main(int argc, char** argv) {
 		free(bamfilelist);
 	}
 
+    if (STDBND)
+        print_mate_bnd_fragment(BNDs, fragment_file);
     return 0;
 }

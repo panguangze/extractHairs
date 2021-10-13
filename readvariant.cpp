@@ -7,6 +7,7 @@
 #include <cstring>
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
+#include <unordered_map>
 
 
 int count_variants_hts(char* vcffile, char* sampleid, int* samplecol){
@@ -299,7 +300,7 @@ int parse_bnd(VARIANT *variant)
         fprintf(stderr, "bug here at position %i", variant->position);
         exit(1);
     }
-    if (STDBND) {
+    if (!STDBND) {
         variant->bnd_mate_chrom = variant->chrom;
         variant->bnd_type = BNDTYPE_PAIRED;
     } else {
@@ -363,7 +364,7 @@ int parse_bnd(VARIANT *variant)
     return 0;
 }
 
-int parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
+int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
 {
     variant->depth = 0;
     variant->A1 = 0;
@@ -572,7 +573,7 @@ int parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
     }
 }
 
-int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *hetvariants)
+int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *hetvariants, std::unordered_map<char*,std::pair<int, int>>& BNDs)
 {
     vcfFile *fp; 
     if ((fp = vcf_open(vcffile, "r")) == 0)
@@ -595,8 +596,17 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
     {
         bcf_unpack(record, BCF_UN_ALL);
         het = parse_variant_hts(&varlist[i], record, header);
+        if(varlist[i].bnd == 1) {
+//            TODO, here delimiter only work for svaba
+            char* token = strtok(varlist[i].id, ":");
+            if (BNDs.find(token) != BNDs.end()) {
+                auto tmp = std::make_pair<int, int>(i+1, 0);
+                BNDs[token] = tmp;
+            } else {
+                BNDs[token].second = i + 1;
+            }
+        }
         (*hetvariants) += het;
-        auto tmp = varlist[i];
 
         //if (het ==0) continue; else (*hetvariants)++;
             //	fprintf(stdout,"%s %d %s %s %s %s\n",varlist[i].chrom,varlist[i].position,varlist[i].RA,varlist[i].AA,varlist[i].genotype,prevchrom);
@@ -608,7 +618,7 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
             chromosomes++;
         }
 
-        i++;   
+        i++;
     }
 
     bcf_destroy(record);
