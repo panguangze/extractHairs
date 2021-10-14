@@ -461,7 +461,7 @@ int main(int argc, char** argv) {
     ht.htsize = 7919;
     init_hashtable(&ht); // chromosome names are inserted into hashtable from VCF file, ideally this should be done using BAM file header to avoid missing some contigs/chroms
     VARIANT* varlist;
-    std::unordered_map<char *, std::pair<int,int>> BNDs;
+    std::unordered_map<std::string , std::pair<int,int>> BNDs;
     int chromosomes = 0;
 
     if (VCFformat == 1) {
@@ -506,6 +506,10 @@ int main(int argc, char** argv) {
 			if (parse_ok != 0) return parse_ok;
         }
     }
+    if (STDBND) {
+        print_mate_bnd_fragment(BNDs, fragment_file);
+//        free(&BNDs);
+    }
 
     if (logfile != NULL) fclose(logfile);
     if (fragment_file != NULL && fragment_file != stdout) fclose(fragment_file);
@@ -542,7 +546,5 @@ int main(int argc, char** argv) {
 		free(bamfilelist);
 	}
 
-    if (STDBND)
-        print_mate_bnd_fragment(BNDs, fragment_file);
     return 0;
 }

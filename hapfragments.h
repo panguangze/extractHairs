@@ -47,7 +47,7 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile);
 int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile);
 
 // add mate bnd connection
-int print_mate_bnd_fragment(std::unordered_map<char*, std::pair<int, int>>& BNDs, FILE* outfile);
+int print_mate_bnd_fragment(std::unordered_map<std::string , std::pair<int, int>>& BNDs, FILE* outfile);
 void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int currchrom, int currpos, int prevchrom);
 
 #endif

@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
 #include <unordered_map>
@@ -573,7 +574,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
     }
 }
 
-int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *hetvariants, std::unordered_map<char*,std::pair<int, int>>& BNDs)
+int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *hetvariants, std::unordered_map<std::string,std::pair<int, int>>& BNDs)
 {
     vcfFile *fp; 
     if ((fp = vcf_open(vcffile, "r")) == 0)
@@ -599,7 +600,7 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
         if(varlist[i].bnd == 1) {
 //            TODO, here delimiter only work for svaba
             char* token = strtok(varlist[i].id, ":");
-            if (BNDs.find(token) != BNDs.end()) {
+            if (BNDs.find(token) == BNDs.end()) {
                 auto tmp = std::make_pair<int, int>(i+1, 0);
                 BNDs[token] = tmp;
             } else {

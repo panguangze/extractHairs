@@ -235,11 +235,15 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
     return 0;
 }
 
-int print_mate_bnd_fragment(std::unordered_map<char*, std::pair<int, int>> & BNDs, FILE* outfile){
+int print_mate_bnd_fragment(std::unordered_map<std::string , std::pair<int, int>> & BNDs, FILE* outfile){
     for (auto bnd: BNDs) {
+        if (bnd.second.first == 0 || bnd.second.second == 0)
+            continue;
 //        1 SRR3760936.8700_MP 16 000 77A 60
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 3; i++){
             fprintf(outfile, "2 BND %d 1 %d 1 77A 60",bnd.second.first, bnd.second.second);
+            fprintf(outfile,"\n");
+        }
     }
     return 1;
 }
