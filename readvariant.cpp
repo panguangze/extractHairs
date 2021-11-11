@@ -361,7 +361,6 @@ int parse_bnd(VARIANT *variant)
             variant->bnd_pair_distance = -1;
         }
     }
-    fprintf(stderr, "BND\t%d\t%d\n", variant->position, variant->bnd_mate_pos);
     return 0;
 }
 
@@ -375,9 +374,8 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
     variant->phase_set = 0;
 
     const char *chrom = bcf_seqname(header, record);
-    variant->chrom = (char*) malloc(strlen(chrom) + 3+1);
-    strcpy(variant->chrom, "chr");
-    strcat(variant->chrom, chrom);
+    variant->chrom = (char*) malloc(strlen(chrom) +1);
+    strcpy(variant->chrom, chrom);
     variant->id = (char*) malloc(strlen(record->d.id) + 1);
     strcpy(variant->id, record->d.id);
     variant->position = record->pos + 1;
