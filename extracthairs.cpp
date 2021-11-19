@@ -506,7 +506,8 @@ int main(int argc, char** argv) {
 			if (parse_ok != 0) return parse_ok;
         }
     }
-    print_mate_bnd_fragment(BNDs, fragment_file);
+    if (!STDBND)
+        print_mate_bnd_fragment(BNDs, fragment_file);
 //        free(&BNDs);
 
     if (logfile != NULL) fclose(logfile);
