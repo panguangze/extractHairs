@@ -323,7 +323,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
             //fixme sv position is not a precise location, a range +-5
             if (PARSEBND)
             {
-                if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + 6 && varlist[ss].position >= start + l2 -6) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last )
+                if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + BND_RANGE + 1 && varlist[ss].position >= start + l2 - BND_RANGE - 1) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last )
                 {
                     fragment->alist[fragment->variants].varid = ss;
                     fragment->alist[fragment->variants].allele = '1';
@@ -341,7 +341,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         {
             if (PARSEBND)
             {
-                if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + 6 && varlist[ss].position >= start + l2 -6) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last )
+                if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + BND_RANGE + 1 && varlist[ss].position >= start + l2 - BND_RANGE - 1) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last )
                 {
                     fragment->alist[fragment->variants].varid = ss;
                     fragment->alist[fragment->variants].allele = '1';

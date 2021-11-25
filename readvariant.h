@@ -21,7 +21,7 @@ extern int TRI_ALLELIC;
 extern int BSIZE;
 extern int PRINT_FRAGMENTS;
 extern bool VCF_PHASED;
-extern int STDBND;
+extern int MATE_AT_SAME;
 extern int MINBNDIS;
 //int VARIANTS = 0;
 

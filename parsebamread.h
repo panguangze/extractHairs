@@ -10,6 +10,7 @@ extern int PARSEINDELS;
 extern int PARSEBND;
 extern int IFLAG;
 extern int MAX_IS;
+extern int BND_RANGE;
 
 int compare_read_SNP(struct alignedread* read, VARIANT* varlist, int ss, int start, int l1, int l2, FRAGMENT* fragment);
 

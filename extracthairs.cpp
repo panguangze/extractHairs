@@ -32,7 +32,7 @@ int VARIANTS = 0;
 int VCFformat = 0;
 int PARSEINDELS = 0;
 int PARSEBND= 0;
-int STDBND = 0;
+int MATE_AT_SAME = 0;
 int SINGLEREADS = 0;
 int LONG_READS = 0;
 int REALIGN_VARIANTS = 0;
@@ -51,6 +51,7 @@ int PACBIO = 0;
 int USE_SUPP_ALIGNMENTS =0; // use supplementary alignments, flag = 2048
 int SUM_ALL_ALIGN =0; // if set to 1, use sum of all alignments scoring forr local realignment 
 int HOMOZYGOUS = 0; // also output alleles for homozygous variants, by default such variants are ignored
+int BND_RANGE = 5;
 
 int* fcigarlist; // global variable
 
@@ -115,7 +116,8 @@ void print_options() {
     fprintf(stderr, "--PEonly <0/1> : do not use single end reads, default is 0 (use all reads)\n");
     fprintf(stderr, "--indels <0/1> : extract reads spanning INDELS, default 0, variants need to specified in VCF format to use this option\n");
     fprintf(stderr, "--breakends <0/1> : extract reads spanning break end, default is 0, variants need to specified in VCF format to use this option\n");
-    fprintf(stderr, "--std_bnd <0/1> : extract reads spanning break end, default is 0, variants need to specified in VCF format to use this option\n");
+    fprintf(stderr, "--mate_at_same <0/1> : extract reads spanning break end, default is 0, variants need to specified in VCF format to use this option\n");
+    fprintf(stderr, "--bnd_range <INT> : BND position is not a precise location, a range +- bnd_range\n");
     fprintf(stderr, "--fosmid <0/1> : extract reads with fosmid pool library preparation, default 0, specified if you are using mate-pair seqeuncing. \n");
     fprintf(stderr, "--noquality <INTEGER> : if the bam file does not have quality string, this value will be used as the uniform quality value, default 0 \n");
     fprintf(stderr,"--triallelic <0/1> : include variants with genotype 1/2 for parsing, default 0 \n");
@@ -379,6 +381,8 @@ int main(int argc, char** argv) {
             MAX_IS = atoi(argv[i + 1]);
         else if (strcmp(argv[i], "--minIS") == 0)
             MIN_IS = atoi(argv[i + 1]);
+        else if (strcmp(argv[i], "--bnd_range") == 0)
+            BND_RANGE = atoi(argv[i + 1]);
         else if (strcmp(argv[i], "--fullprint") == 0)
 			PRINT_COMPACT = atoi(argv[i + 1]);
         else if (strcmp(argv[i], "--PEonly") == 0){
@@ -390,9 +394,9 @@ int main(int argc, char** argv) {
         }else if (strcmp(argv[i], "--breakends") == 0){
             check_input_0_or_1(argv[i + 1]);
             PARSEBND = atoi(argv[i + 1]); // parse bnd support
-        }else if (strcmp(argv[i], "--std_bnd") == 0){
+        }else if (strcmp(argv[i], "--mate_at_same") == 0){
             check_input_0_or_1(argv[i + 1]);
-            STDBND = atoi(argv[i + 1]); // if standard vcf bnd
+            MATE_AT_SAME = atoi(argv[i + 1]); // if standard vcf bnd
         }else if (strcmp(argv[i], "--pflag") == 0){
             check_input_0_or_1(argv[i + 1]);
             IFLAG = atoi(argv[i + 1]); // allow indels in hairs
@@ -506,7 +510,7 @@ int main(int argc, char** argv) {
 			if (parse_ok != 0) return parse_ok;
         }
     }
-    if (!STDBND)
+    if (MATE_AT_SAME)
         print_mate_bnd_fragment(BNDs, fragment_file);
 //        free(&BNDs);
 
