@@ -1,5 +1,7 @@
 /* functions for comparing an aligned sequence read to the set of variants to identify alleles and haplotype-informative reads */
 
+#include <fstream>
+#include <map>
 #include "parsebamread.h"
 #include "readvariant.h"
 
@@ -222,6 +224,16 @@ int compare_read_INDEL(struct alignedread* read, VARIANT* varlist, int ss, int s
         fragment->variants++;
     }
     return 0;
+}
+std::map<int, float> parse_freq(std::string freq_file){
+    std::ifstream infile(freq_file);
+    std::map<int, float> result;
+    int pos;
+    float freq;
+    while (infile >> pos >> freq) {
+        result[pos] = freq;
+    }
+    return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
