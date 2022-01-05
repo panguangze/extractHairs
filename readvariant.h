@@ -62,6 +62,7 @@ typedef struct {
     int bnd_direction;
     int bnd_mate_pos;
     char* bnd_mate_chrom;
+    char* bnd_seq; // sequence around bnd site
     
     // total reads covering this variant (haploid/diploid, A1-> reads supporting reference allele (single-read)
     //	float L11,L12,L22; // genotype likelihoods for three possible genotypes
@@ -100,7 +101,7 @@ int count_variants_hts(char* vcffile, char* sampleid, int* samplecol);
 
 int parse_variant(VARIANT* variant, char* buffer, int samplecol);
 
-int parse_variant_hts(VARIANT* variant, const bcf1_t * record, const bcf_hdr_t *header);
+int parse_variant_hts(VARIANT* variant, const bcf1_t * record, const bcf_hdr_t *header, int chromosome);
 
 int read_variantfile(char* vcffile, VARIANT* varlist, HASHTABLE* ht, int* hetvariants, int samplecol);
 
@@ -110,6 +111,7 @@ void build_intervalmap(CHROMVARS* chromvars, int chromosomes, VARIANT* varlist, 
 
 int calculate_rightshift(VARIANT* varlist, int ss, REFLIST* reflist);
 
-int parse_bnd(VARIANT* variant);
+int parse_bnd(VARIANT* variant, int chromosome);
 
+void bnd_to_ref_seq(VARIANT *variant, REFLIST* reflist, int chromosome);
 #endif

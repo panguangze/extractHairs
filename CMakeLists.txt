@@ -12,6 +12,8 @@ set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 ")
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 add_subdirectory(lib/bamtools-2.3.0)
+include_directories (lib/bamtools-2.3.0/src)
+include_directories(lib/tclap-1.2.1/include)
 aux_source_directory(. EXTRACT_SRC)
 aux_source_directory(./htslib HTS_SRC)
 aux_source_directory(./samtools SAM_SRC)
@@ -22,4 +24,4 @@ set(LIBHTS libhts.a)
 
 add_executable(ExtractHAIRs ${EXTRACT_SRC})
 
-target_link_libraries(ExtractHAIRs -lhts z /usr/lib/libhts.so)
+target_link_libraries(ExtractHAIRs -lhts z /usr/lib/libhts.so -lseqan)

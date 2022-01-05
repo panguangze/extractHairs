@@ -9,7 +9,7 @@
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
 #include <unordered_map>
-
+int BLAST_REGION_LEN = 100;
 
 int count_variants_hts(char* vcffile, char* sampleid, int* samplecol){
     vcfFile *fp;
@@ -120,7 +120,7 @@ int count_variants(char* vcffile, char* sampleid, int* samplecol) {
 
 //TODO: clarify between 1/2 genotyped breakend and breakend with multiple mate, they both have two fields in alt alleles. might cause a bug
 // now we don't consider multiple mate yet
-int parse_bnd(VARIANT *variant)
+int parse_bnd(VARIANT *variant, int chromosome)
 {
     if (variant->bnd == 0)
     {
@@ -163,6 +163,8 @@ int parse_bnd(VARIANT *variant)
         }
     }
 
+
+
     else {
         //single breakend
         variant->bnd_type = BNDTYPE_SINGLE_END;
@@ -186,7 +188,7 @@ int parse_bnd(VARIANT *variant)
     return 0;
 }
 
-int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header)
+int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header, int chromosome)
 {
     variant->depth = 0;
     variant->A1 = 0;
@@ -342,7 +344,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
 //            if (ninfo != 0)
 //                variant->bnd_mate_pos = end_info;
 //            free(end_info);
-            parse_bnd(variant);
+            parse_bnd(variant, chromosome);
         }
         
         if (variant->type != 0 || variant->bnd == 1)      // if indel or bnd, consider 0/1 only
@@ -423,7 +425,7 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
     while (bcf_read1(fp, header, record) >= 0)
     {
         bcf_unpack(record, BCF_UN_ALL);
-        het = parse_variant_hts(&varlist[i], record, header);
+        het = parse_variant_hts(&varlist[i], record, header, chromosomes);
         if(varlist[i].bnd == 1) {
 //            TODO, here delimiter only work for svaba
             char* token = strtok(varlist[i].id, ":");
@@ -544,6 +546,47 @@ int calculate_rightshift(VARIANT* varlist, int ss, REFLIST* reflist) {
 		return 0;
 	}
 }
+void bnd_to_ref_seq(VARIANT *variant, REFLIST* reflist, int chromosome) {
 
+    if (variant->bnd == 0)
+    {
+        fprintf(stderr, "bug here at position %i", variant->position);
+        exit(1);
+    }
+
+    char *ori_bnd_str = variant->allele2;
+    char *bnd_str = (char*) malloc(strlen(variant->allele2) + 1);
+    strcpy(bnd_str, variant->allele2);
+
+    auto start1 = 0;
+    auto start2 = 0;
+    auto dir1 = 0;
+    auto dir2 = 0;
+    if (ori_bnd_str[0] != '[' && ori_bnd_str[0] != ']') {
+        start1 = variant->position - BLAST_REGION_LEN;
+        if (ori_bnd_str[1] == ']') start2 = variant->bnd_mate_pos - BLAST_REGION_LEN, dir2 = 1;
+        else start2 = variant->bnd_mate_pos;
+    } else {
+        start2 = variant->position;
+        if (ori_bnd_str[0] == ']') start1 = variant->bnd_mate_pos - BLAST_REGION_LEN;
+        else start1 = variant->bnd_mate_pos, dir1 = 1;
+    }
+
+    auto seq = reflist->sequences[chromosome];
+    char* bnd_seq = (char*) malloc(2*BLAST_REGION_LEN + 1);
+    for (int i = start1; i < start1 + BLAST_REGION_LEN; i++) {
+        if (dir1 == 1)
+            bnd_seq[BLAST_REGION_LEN - (i-start1 +1)] = seq[i];
+        else
+            bnd_seq[i - start1] = seq[i];
+    }
+    for (int i = start2; i < start1 + BLAST_REGION_LEN; i++) {
+        if (dir2 == 1)
+            bnd_seq[2*BLAST_REGION_LEN - (i-start1 +1)] = seq[i];
+        else
+            bnd_seq[i - start2 + BLAST_REGION_LEN] = seq[i];
+    }
+    variant->bnd_seq = bnd_seq;
+}
 
 

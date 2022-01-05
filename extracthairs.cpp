@@ -495,12 +495,18 @@ int main(int argc, char** argv) {
             for (i = 0; i < reflist->ns; i++) {
                 reflist->sequences[i] = (unsigned char *) calloc(reflist->lengths[i] + 1, sizeof (unsigned char));
                 int chrom = getindex(&ht, reflist->names[i]); reflist->used[i] = 1;
-				if (chrom >=0) fprintf(stderr,"found match for reference contig %s in VCF file index \n",reflist->names[i]); 
-				else reflist->used[i] = 0; // memory for this chromosome will be freed 
+				if (chrom >=0) fprintf(stderr,"found match for reference contig %s in VCF file index \n",reflist->names[i]);
+				else reflist->used[i] = 0; // memory for this chromosome will be freed
                 if (i < 5) fprintf(stderr, "contig %s length %d\n", reflist->names[i], reflist->lengths[i]);
             }
             read_fasta(fastafile, reflist);
         }
+    }
+
+    for (const auto& bnd : BNDs) {
+        auto idx = bnd.second.first - 1;
+        auto var = varlist[idx];
+        bnd_to_ref_seq(&var, reflist, getindex(&ht, var.chrom));
     }
     if (readsorted == 0 && bamfiles > 0) {
         for (i = 0; i < bamfiles; i++) {

@@ -4,6 +4,7 @@
 #include "realign_pairHMM.h"
 int MIN_QUAL = 10;
 
+float BLAST_RATIO = 0.85;
 int MINLEN= 8;
 int COMPLEXITY_K = 5; // anchor sequences must have unique kmers of this length
 int SHORT_HAP_CUTOFF = 20; // separation between variants to be considered part of the same local haplotype for realignment
@@ -604,56 +605,76 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
 		{
 			len_a1 = strlen(varlist[ss].allele1);
 			len_a2 = strlen(varlist[ss].allele2);
-			while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position >= l2 && varlist[ss].position < l2 + ol
-					&& left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN){ // so that the read is long enough to span an indel
+			while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position >= l2 && varlist[ss].position < l2 + ol){ // so that the read is long enough to span an indel
+                if (varlist[ss].bnd == 1) {
+                    auto bnd_score = blast_score(varlist[ss].bnd_seq, read->sequence);
+                    auto ref_score = blast_score();
+                    if (bnd_score > ref_score && bnd_score >= BLAST_RATIO) {
+                        fragment->alist[fragment->variants].varid = ss;
+                        fragment->alist[fragment->variants].allele = '1';
+                        fragment->alist[fragment->variants].qv = read->quality[l1];
+                        fragment->variants++;
+                        varlist[ss].depth++;
+                        if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+                        else varlist[ss].A2 += 1;
+                    } else if (ref_score > bnd_score && ref_score >= BLAST_RATIO) {
+                        fragment->alist[fragment->variants].varid = ss;
+                        fragment->alist[fragment->variants].allele = '0';
+                        fragment->alist[fragment->variants].qv = read->quality[l1];
+                        fragment->variants++;
+                        varlist[ss].depth++;
+                        if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+                        else varlist[ss].A2 += 1;
+                    }
+                }else if (left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN && varlist[ss].bnd == 0) {
+                    if (varlist[ss].heterozygous >= '1' || HOMOZYGOUS ==1){
+                        //fprintf(stderr,"%d %s",varlist[ss].position, varlist[ss].allele1, varlist[ss].allele2);
+                        // If this variant is far away from the last variant, then analyze the cluster of variants seen up til now
+                        if (n_variants > 0 && ((varlist[ss].position - prev_snp_position > SHORT_HAP_CUTOFF) || (n_variants >= MAX_SNPs_SHORT_HAP))){
 
-				if (varlist[ss].heterozygous >= '1' || HOMOZYGOUS ==1){
-					//fprintf(stderr,"%d %s",varlist[ss].position, varlist[ss].allele1, varlist[ss].allele2);
-					// If this variant is far away from the last variant, then analyze the cluster of variants seen up til now
-					if (n_variants > 0 && ((varlist[ss].position - prev_snp_position > SHORT_HAP_CUTOFF) || (n_variants >= MAX_SNPs_SHORT_HAP))){
+                            // if we aren't parsing INDELs, make sure this short haplotype has at least one SNV
+                            // call allelotyping function
+                            if (n_snvs > 0 || PARSEINDELS) compare_read_HAPs(read,varlist,snplst,n_variants,hap_pos,fcigarlist,fcigs,f1,f2,reflist,fragment);
+                            // empty the current cluster of variants
+                            n_variants = 0; n_snvs=0;
+                            for (j=0; j < 5; j++)hap_pos[j] = -1;
+                        }
 
-						// if we aren't parsing INDELs, make sure this short haplotype has at least one SNV
-						// call allelotyping function
-						if (n_snvs > 0 || PARSEINDELS) compare_read_HAPs(read,varlist,snplst,n_variants,hap_pos,fcigarlist,fcigs,f1,f2,reflist,fragment);
-						// empty the current cluster of variants
-						n_variants = 0; n_snvs=0;
-						for (j=0; j < 5; j++)hap_pos[j] = -1;
-					}
+                        if (n_variants == 0){
+                            hap_pos[0] = l1;
+                            hap_pos[1] = l2;
+                            f1 = i;
+                        }
 
-					if (n_variants == 0){
-						hap_pos[0] = l1;
-						hap_pos[1] = l2;
-						f1 = i;
-					}
+                        // currently just adding the indel value to the ends of the boundaries
+                        // the ends might not match up perfectly, ideally we want to maintain a position we have to reach,
+                        // given the (possibly) large indels we've seen, and continue
+                        // parsing the CIGAR in the normal way until we've well passed that position
+                        len_a1 = strlen(varlist[ss].allele1);
+                        len_a2 = strlen(varlist[ss].allele2);
+                        if (len_a1 > len_a2){ // deletion
+                            if (l1 + len_a1 > hap_pos[2]) hap_pos[2] = l1 + len_a1;
+                            if (l2 + len_a1 > hap_pos[3]) hap_pos[3] = l2 + len_a1;
+                            prev_snp_position = varlist[ss].position + len_a1;
+                        }else{  // insertion
+                            if (l1 + len_a2 > hap_pos[2]) hap_pos[2] = l1 + len_a2;
+                            if (l2 + len_a2 > hap_pos[3]) hap_pos[3] = l2 + len_a2;
+                            prev_snp_position = varlist[ss].position + len_a2;
+                        }
 
-					// currently just adding the indel value to the ends of the boundaries
-					// the ends might not match up perfectly, ideally we want to maintain a position we have to reach,
-					// given the (possibly) large indels we've seen, and continue
-					// parsing the CIGAR in the normal way until we've well passed that position
-					len_a1 = strlen(varlist[ss].allele1);
-					len_a2 = strlen(varlist[ss].allele2);
-					if (len_a1 > len_a2){ // deletion
-						if (l1 + len_a1 > hap_pos[2]) hap_pos[2] = l1 + len_a1;
-						if (l2 + len_a1 > hap_pos[3]) hap_pos[3] = l2 + len_a1;
-						prev_snp_position = varlist[ss].position + len_a1;
-					}else{  // insertion
-						if (l1 + len_a2 > hap_pos[2]) hap_pos[2] = l1 + len_a2;
-						if (l2 + len_a2 > hap_pos[3]) hap_pos[3] = l2 + len_a2;
-						prev_snp_position = varlist[ss].position + len_a2;
-					}
-
-					f2 = i; hap_pos[4] = l2; 
-					// add variant to the list
-					snplst[n_variants] = ss; // no check on length of this list, not needed
-					calculate_rightshift(varlist, ss, reflist); // no need to do it multiple times..
-					if (varlist[ss].type ==0) n_snvs++;
-					n_variants++;
-				}
-				ss++;
-				if (ss < VARIANTS && ss <= chromvars[chrom].last){
-					len_a1 = strlen(varlist[ss].allele1);
-					len_a2 = strlen(varlist[ss].allele2);
-				}
+                        f2 = i; hap_pos[4] = l2;
+                        // add variant to the list
+                        snplst[n_variants] = ss; // no check on length of this list, not needed
+                        calculate_rightshift(varlist, ss, reflist); // no need to do it multiple times..
+                        if (varlist[ss].type ==0) n_snvs++;
+                        n_variants++;
+                    }
+                }
+                ss++;
+                if (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].bnd != 1){
+                    len_a1 = strlen(varlist[ss].allele1);
+                    len_a2 = strlen(varlist[ss].allele2);
+                }
 			}
 		}
 
@@ -674,5 +695,17 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
 	free(snplst);
 
 	return 0;
+}
+
+float blast_score(const char* seq1, const char* seq2) {
+    typedef seqan::String<seqan::Dna> TSequence;
+    TSequence tSeq1 = seq1;
+    TSequence tSeq2 = seq2;
+    seqan::Align<seqan::String<seqan::Dna>> ali2;
+    seqan::resize(seqan::rows(ali2), 2);
+    seqan::assignSource(seqan::row(ali2, 0), tSeq1);
+    seqan::assignSource(seqan::row(ali2, 0), tSeq2);
+    seqan::EditDistanceScore scores;
+    int result = seqan::localAlignment(ali2, scores);
 }
 
