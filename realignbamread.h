@@ -7,8 +7,10 @@
 #include "bamread.h"
 #include "hapfragments.h"
 #include "readvariant.h"
-#include "seqan/align.h"
-
+//#include "seqan/align.h"
+//
+//#include "seqan/score.h"
+#include "edlib.h"
  // anchor sequences must have unique kmers of this length
 // find the variants that are covered by the read and determine the alleles at each of those variants
 
@@ -36,4 +38,7 @@ int compare_read_HAPs(struct alignedread* read,VARIANT* varlist,int* snplst, int
 int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHROMVARS* chromvars,VARIANT* varlist,int paired,FRAGMENT* fragment,int chrom,REFLIST* reflist);
 
 float blast_score(const char* seq1, const char* seq2);
+
+char* reverse_dna(const char* s);
+char* complement_dna(const char* s);
 #endif // __REALIGNBAMREAD_H__

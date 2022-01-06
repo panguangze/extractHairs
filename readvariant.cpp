@@ -9,7 +9,6 @@
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
 #include <unordered_map>
-int BLAST_REGION_LEN = 100;
 
 int count_variants_hts(char* vcffile, char* sampleid, int* samplecol){
     vcfFile *fp;
@@ -555,8 +554,8 @@ void bnd_to_ref_seq(VARIANT *variant, REFLIST* reflist, int chromosome) {
     }
 
     char *ori_bnd_str = variant->allele2;
-    char *bnd_str = (char*) malloc(strlen(variant->allele2) + 1);
-    strcpy(bnd_str, variant->allele2);
+//    char *bnd_str = (char*) malloc(strlen(variant->allele2) + 1);
+//    strcpy(bnd_str, variant->allele2);
 
     auto start1 = 0;
     auto start2 = 0;
@@ -572,21 +571,33 @@ void bnd_to_ref_seq(VARIANT *variant, REFLIST* reflist, int chromosome) {
         else start1 = variant->bnd_mate_pos, dir1 = 1;
     }
 
-    auto seq = reflist->sequences[chromosome];
-    char* bnd_seq = (char*) malloc(2*BLAST_REGION_LEN + 1);
+    char* seq = reinterpret_cast<char *>(reflist->sequences[chromosome]);
+//    auto mm = new char[2*BLAST_REGION_LEN];
+    variant->bnd_seq = new char[2*BLAST_REGION_LEN];
+    variant->ref_seq = new char[2*BLAST_REGION_LEN];
     for (int i = start1; i < start1 + BLAST_REGION_LEN; i++) {
+        auto m = seq[i];
         if (dir1 == 1)
-            bnd_seq[BLAST_REGION_LEN - (i-start1 +1)] = seq[i];
+            variant->bnd_seq[BLAST_REGION_LEN - (i-start1 +1)] = seq[i];
         else
-            bnd_seq[i - start1] = seq[i];
+            variant->bnd_seq[i - start1] = seq[i];
     }
-    for (int i = start2; i < start1 + BLAST_REGION_LEN; i++) {
-        if (dir2 == 1)
-            bnd_seq[2*BLAST_REGION_LEN - (i-start1 +1)] = seq[i];
+    for (int i = start2; i < start2 + BLAST_REGION_LEN; i++) {
+        if (dir2 == 1){
+            auto idx = 2*BLAST_REGION_LEN - (i-start2) - 1;
+            variant->bnd_seq[idx] = seq[i];
+            auto c = variant->bnd_seq[199];
+            auto k = 3;
+        }
         else
-            bnd_seq[i - start2 + BLAST_REGION_LEN] = seq[i];
+            variant->bnd_seq[i - start2 + BLAST_REGION_LEN] = seq[i];
     }
-    variant->bnd_seq = bnd_seq;
+
+    for (int i = variant->position - BLAST_REGION_LEN; i < variant->position + BLAST_REGION_LEN; i++) {
+        variant->ref_seq[i - (variant->position - BLAST_REGION_LEN)] = seq[i];
+    }
+    variant->bnd_seq[2*BLAST_REGION_LEN] = '\000';
+    variant->ref_seq[2*BLAST_REGION_LEN] = '\000';
 }
 
 

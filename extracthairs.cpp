@@ -52,6 +52,8 @@ int USE_SUPP_ALIGNMENTS =0; // use supplementary alignments, flag = 2048
 int SUM_ALL_ALIGN =0; // if set to 1, use sum of all alignments scoring forr local realignment 
 int HOMOZYGOUS = 0; // also output alleles for homozygous variants, by default such variants are ignored
 int BND_RANGE = 5;
+int BLAST_REGION_LEN = 150;
+
 
 int* fcigarlist; // global variable
 
@@ -503,11 +505,11 @@ int main(int argc, char** argv) {
         }
     }
 
-    for (const auto& bnd : BNDs) {
-        auto idx = bnd.second.first - 1;
-        auto var = varlist[idx];
-        bnd_to_ref_seq(&var, reflist, getindex(&ht, var.chrom));
-    }
+//    for (const auto& bnd : BNDs) {
+//        auto idx = bnd.second.first - 1;
+//        auto var = varlist[idx];
+//        bnd_to_ref_seq(&var, reflist, 0);
+//    }
     if (readsorted == 0 && bamfiles > 0) {
         for (i = 0; i < bamfiles; i++) {
 			int parse_ok = 0;

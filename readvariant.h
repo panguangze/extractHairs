@@ -35,6 +35,8 @@ extern int MINBNDIS;
 #define BNDDIRECT_PLT 2
 #define BNDDIRECT_PRT 3
 
+extern int BND_RANGE;
+extern int BLAST_REGION_LEN;
 
 typedef struct {
     char* id;           //variant id
@@ -61,8 +63,9 @@ typedef struct {
     int bnd_type;
     int bnd_direction;
     int bnd_mate_pos;
-    char* bnd_mate_chrom;
+    char * bnd_mate_chrom;
     char* bnd_seq; // sequence around bnd site
+    char* ref_seq;
     
     // total reads covering this variant (haploid/diploid, A1-> reads supporting reference allele (single-read)
     //	float L11,L12,L22; // genotype likelihoods for three possible genotypes

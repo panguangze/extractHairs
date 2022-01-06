@@ -607,8 +607,10 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
 			len_a2 = strlen(varlist[ss].allele2);
 			while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position >= l2 && varlist[ss].position < l2 + ol){ // so that the read is long enough to span an indel
                 if (varlist[ss].bnd == 1) {
+                    bnd_to_ref_seq(&varlist[ss], reflist, reflist->current);
+//                    auto tm = varlist[ss].bnd_seq[199];
                     auto bnd_score = blast_score(varlist[ss].bnd_seq, read->sequence);
-                    auto ref_score = blast_score();
+                    auto ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
                     if (bnd_score > ref_score && bnd_score >= BLAST_RATIO) {
                         fragment->alist[fragment->variants].varid = ss;
                         fragment->alist[fragment->variants].allele = '1';
@@ -626,6 +628,8 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
                         if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
                         else varlist[ss].A2 += 1;
                     }
+                    free(varlist->bnd_seq);
+                    free(varlist->ref_seq);
                 }else if (left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN && varlist[ss].bnd == 0) {
                     if (varlist[ss].heterozygous >= '1' || HOMOZYGOUS ==1){
                         //fprintf(stderr,"%d %s",varlist[ss].position, varlist[ss].allele1, varlist[ss].allele2);
@@ -697,15 +701,125 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
 	return 0;
 }
 
+//float blast_score(const char* seq1, const char* seq2) {
+//    using namespace seqan;
+//    StringSet<DnaString> stringSet;
+//    appendValue(stringSet, seq2);
+//    appendValue(stringSet, seq1);
+//    Align<DnaString> align(stringSet);                      // Initialize the Align object using a StringSet.
+//    Score<int> scoring(1, 0, -2,-1);
+//    int score = localAlignment(align, scoring);  // Compute a global alingment using the Align object.
+//    clear(stringSet);
+//
+////    rev
+//    appendValue(stringSet, seq2);
+//    auto seq1_r = reverse_dna(seq1);
+//    appendValue(stringSet, seq1_r);
+//    Align<DnaString> align2(stringSet);                      // Initialize the Align object using a StringSet.
+//    int score2 = localAlignment(align2, scoring);  // Compute a global alingment using the Align object.
+//    clear(stringSet);
+//
+////    complement
+//    appendValue(stringSet, seq2);
+//    auto seq1_c = complement_dna(seq1);
+//    appendValue(stringSet, seq1_c);
+//    Align<DnaString> align3(stringSet);                      // Initialize the Align object using a StringSet.
+//    int score3 = localAlignment(align3, scoring);  // Compute a global alingment using the Align object.
+//    clear(stringSet);
+//
+//    //  complement rev
+//
+//    appendValue(stringSet, seq2);
+//    auto seq1_c_r = reverse_dna(seq1_c);
+//    appendValue(stringSet, seq1_c_r);
+//    Align<DnaString> align4(stringSet);                      // Initialize the Align object using a StringSet.
+//    int score4 = localAlignment(align4, scoring);  // Compute a global alingment using the Align object.
+//    free(seq1_r);
+//    free(seq1_c);
+//    free(seq1_c_r);
+//
+//
+//    return float(std::max({score, score2, score3, score4})) / float(2*BLAST_REGION_LEN);
+////    typedef seqan::String<seqan::Dna5String> TSequence;
+////    seqan::Dna5String tSeq1 = "AAAAACCCC";
+////    seqan::Dna5String tSeq2 = "TTTTTGGGG";
+////    seqan::Align<seqan::Dna5String> ali2;
+////    seqan::resize(seqan::rows(ali2), 2);
+////    seqan::assignSource(seqan::row(ali2, 0), tSeq1);
+////    seqan::assignSource(seqan::row(ali2, 0), tSeq2);
+////    seqan::Score<int, seqan::Simple> scoring(1,-1,-1);
+////    int result = seqan::localAlignment(ali2, scoring);
+//}
+
 float blast_score(const char* seq1, const char* seq2) {
-    typedef seqan::String<seqan::Dna> TSequence;
-    TSequence tSeq1 = seq1;
-    TSequence tSeq2 = seq2;
-    seqan::Align<seqan::String<seqan::Dna>> ali2;
-    seqan::resize(seqan::rows(ali2), 2);
-    seqan::assignSource(seqan::row(ali2, 0), tSeq1);
-    seqan::assignSource(seqan::row(ali2, 0), tSeq2);
-    seqan::EditDistanceScore scores;
-    int result = seqan::localAlignment(ali2, scores);
+    EdlibAlignResult result = edlibAlign(seq1, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+    int s1 = 2 * BLAST_REGION_LEN, s2 = 2 * BLAST_REGION_LEN, s3 = 2 * BLAST_REGION_LEN, s4 = 2 * BLAST_REGION_LEN;
+    if (result.status == EDLIB_STATUS_OK) {
+        s1 = result.editDistance;
+    }
+
+    edlibFreeAlignResult(result);
+    auto rev = reverse_dna(seq1);
+    result = edlibAlign(rev, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+    if (result.status == EDLIB_STATUS_OK) {
+        s2 = result.editDistance;
+    }
+    edlibFreeAlignResult(result);
+
+    result = edlibAlign(complement_dna(seq1), strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+    if (result.status == EDLIB_STATUS_OK) {
+        s3 = result.editDistance;
+    }
+    edlibFreeAlignResult(result);
+
+    result = edlibAlign(complement_dna(rev), strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+    if (result.status == EDLIB_STATUS_OK) {
+        s4 = result.editDistance;
+    }
+    edlibFreeAlignResult(result);
+    int min = s1 < s2 ? s1:s2;
+    min = min < s3? min : s3;
+    min = min < s4? min : s4;
+    return (float)(2* BLAST_REGION_LEN - min)/(float)(2*BLAST_REGION_LEN);
+}
+char* reverse_dna(const char* s) {
+    char* tmp = new char[2*BLAST_REGION_LEN];
+    for (int i = 2*BLAST_REGION_LEN - 1; i >= 0; i--) {
+        tmp[2*BLAST_REGION_LEN -1 - i] = s[i];
+    }
+    return tmp;
+}
+
+char* complement_dna(const char* s) {
+    char* tmp = new char[2*BLAST_REGION_LEN];
+    for (int i = 0; i < 2*BLAST_REGION_LEN; i++) {
+        switch(s[i]) {
+            case 'A':
+                tmp[i] = 'T';
+                break;
+            case 'G':
+                tmp[i] = 'C';
+                break;
+            case 'C':
+                tmp[i] = 'G';
+                break;
+            case 'T':
+                tmp[i] = 'A';
+                break;
+            case 'a':
+                tmp[i] = 'T';
+                break;
+            case 'g':
+                tmp[i] = 'C';
+                break;
+            case 'c':
+                tmp[i] = 'G';
+                break;
+            case 't':
+                tmp[i] = 'A';
+                break;
+        }
+    }
+    return tmp;
 }
 
