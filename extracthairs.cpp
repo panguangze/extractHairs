@@ -518,8 +518,9 @@ int main(int argc, char** argv) {
 			if (parse_ok != 0) return parse_ok;
         }
     }
-    if (MATE_AT_SAME)
+    if (MATE_AT_SAME){
         print_mate_bnd_fragment(BNDs, fragment_file);
+    }
 //        free(&BNDs);
 
     if (logfile != NULL) fclose(logfile);

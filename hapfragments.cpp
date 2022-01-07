@@ -240,9 +240,17 @@ int print_mate_bnd_fragment(std::unordered_map<std::string , std::pair<int, int>
         if (bnd.second.first == 0 || bnd.second.second == 0)
             continue;
 //        1 SRR3760936.8700_MP 16 000 77A 60
-        for (int i = 0; i < 3; i++){
-            fprintf(outfile, "2 BND %d 1 %d 1 77A 60",bnd.second.first, bnd.second.second);
-            fprintf(outfile,"\n");
+// 2 chr14_2_106757572_106757738_0_1_0_0_0:0:0_0:0:0_a30_MP 2 AAGCTACTCGAAACTC-1 -1 145078 0 145081 0 ID 60 0 0.317771
+        if (NEW_FORMAT) {
+            for (int i = 0; i < 3; i++){
+                fprintf(outfile, "2 BND 2 NNNNNNNNNNNN-1 -1 %d 1 %d 1 ID 60 0 0.31",bnd.second.first, bnd.second.second);
+                fprintf(outfile,"\n");
+            }
+        } else {
+            for (int i = 0; i < 3; i++){
+                fprintf(outfile, "2 BND %d 1 %d 1 77A 60",bnd.second.first, bnd.second.second);
+                fprintf(outfile,"\n");
+            }
         }
     }
     return 1;

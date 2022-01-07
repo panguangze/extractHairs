@@ -609,8 +609,15 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
                 if (varlist[ss].bnd == 1) {
                     bnd_to_ref_seq(&varlist[ss], reflist, reflist->current);
 //                    auto tm = varlist[ss].bnd_seq[199];
-                    auto bnd_score = blast_score(varlist[ss].bnd_seq, read->sequence);
-                    auto ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
+                    float bnd_score = 0;
+                    float ref_score = 0;
+                    if (varlist[ss].bnd_type == BND_INS) { //insertion, TODO, if have insertion seq, bnd alignment
+                        bnd_score = 0;
+                        ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
+                    } else {
+                        bnd_score = blast_score(varlist[ss].bnd_seq, read->sequence);
+                        ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
+                    }
                     if (bnd_score > ref_score && bnd_score >= BLAST_RATIO) {
                         fragment->alist[fragment->variants].varid = ss;
                         fragment->alist[fragment->variants].allele = '1';
@@ -628,8 +635,10 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
                         if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
                         else varlist[ss].A2 += 1;
                     }
-                    free(varlist->bnd_seq);
-                    free(varlist->ref_seq);
+//                    if(varlist->bnd_seq != nullptr)
+//                        free(varlist->bnd_seq);
+//                    if(varlist->ref_seq != nullptr)
+//                        free(varlist->ref_seq);
                 }else if (left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN && varlist[ss].bnd == 0) {
                     if (varlist[ss].heterozygous >= '1' || HOMOZYGOUS ==1){
                         //fprintf(stderr,"%d %s",varlist[ss].position, varlist[ss].allele1, varlist[ss].allele2);
@@ -760,23 +769,27 @@ float blast_score(const char* seq1, const char* seq2) {
 
     edlibFreeAlignResult(result);
     auto rev = reverse_dna(seq1);
+//    auto rev = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
     result = edlibAlign(rev, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
     if (result.status == EDLIB_STATUS_OK) {
         s2 = result.editDistance;
     }
     edlibFreeAlignResult(result);
-
-    result = edlibAlign(complement_dna(seq1), strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+    auto dna_r = complement_dna(seq1);
+    result = edlibAlign(dna_r, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
     if (result.status == EDLIB_STATUS_OK) {
         s3 = result.editDistance;
     }
     edlibFreeAlignResult(result);
-
-    result = edlibAlign(complement_dna(rev), strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+    auto c_r = complement_dna(rev);
+    result = edlibAlign(c_r, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
     if (result.status == EDLIB_STATUS_OK) {
         s4 = result.editDistance;
     }
     edlibFreeAlignResult(result);
+    free(rev);
+    free(c_r);
+    free(dna_r);
     int min = s1 < s2 ? s1:s2;
     min = min < s3? min : s3;
     min = min < s4? min : s4;
@@ -787,6 +800,7 @@ char* reverse_dna(const char* s) {
     for (int i = 2*BLAST_REGION_LEN - 1; i >= 0; i--) {
         tmp[2*BLAST_REGION_LEN -1 - i] = s[i];
     }
+    tmp[2*BLAST_REGION_LEN] = '\000';
     return tmp;
 }
 
@@ -817,6 +831,9 @@ char* complement_dna(const char* s) {
                 break;
             case 't':
                 tmp[i] = 'A';
+                break;
+            case 'N':
+                tmp[i] = 'N';
                 break;
         }
     }

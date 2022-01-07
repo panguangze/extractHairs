@@ -379,7 +379,7 @@ if (PARSEBND)
             int sss = firstvar;
             while (varlist[sss].position >= start_pos && sss >= chromvars[chrom].first) {
                 if (varlist[sss].bnd ==1 && varlist[sss].heterozygous == '1' ) {
-                    if (varlist[sss].bnd_type != BNDTYPE_PAIRED) //we only consider paired at this moment
+                    if (varlist[sss].bnd_type != BNDTYPE_PAIRED || varlist[sss].bnd_type != BND_INS) //we only consider paired at this moment
                         break;
                     if (abs(varlist[sss].bnd_pair_distance - read->IS) < 1500)
                     {

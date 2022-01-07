@@ -133,6 +133,15 @@ int parse_bnd(VARIANT *variant, int chromosome)
     char *pch;
     pch = strtok(bnd_str, "][:");
 
+    if (strcmp(variant->AA, "<INS>") == 0) { //for TODO, if have insertion seq, distance = svlen
+        variant->bnd_type = BND_INS;
+        variant->bnd_mate_chrom = variant->chrom;
+        variant->bnd_mate_pos = variant->position + 1;
+        variant->bnd_pair_distance = 200;
+        free(bnd_str);
+        return 0;
+    }
+
     if (strchr(ori_bnd_str, '[') != NULL)
     {
         if (ori_bnd_str[0] == '[')
@@ -575,22 +584,24 @@ void bnd_to_ref_seq(VARIANT *variant, REFLIST* reflist, int chromosome) {
 //    auto mm = new char[2*BLAST_REGION_LEN];
     variant->bnd_seq = new char[2*BLAST_REGION_LEN];
     variant->ref_seq = new char[2*BLAST_REGION_LEN];
-    for (int i = start1; i < start1 + BLAST_REGION_LEN; i++) {
-        auto m = seq[i];
-        if (dir1 == 1)
-            variant->bnd_seq[BLAST_REGION_LEN - (i-start1 +1)] = seq[i];
-        else
-            variant->bnd_seq[i - start1] = seq[i];
-    }
-    for (int i = start2; i < start2 + BLAST_REGION_LEN; i++) {
-        if (dir2 == 1){
-            auto idx = 2*BLAST_REGION_LEN - (i-start2) - 1;
-            variant->bnd_seq[idx] = seq[i];
-            auto c = variant->bnd_seq[199];
-            auto k = 3;
+    if (variant->bnd_type != BND_INS) {
+        for (int i = start1; i < start1 + BLAST_REGION_LEN; i++) {
+            auto m = seq[i];
+            if (dir1 == 1)
+                variant->bnd_seq[BLAST_REGION_LEN - (i-start1 +1)] = seq[i];
+            else
+                variant->bnd_seq[i - start1] = seq[i];
         }
-        else
-            variant->bnd_seq[i - start2 + BLAST_REGION_LEN] = seq[i];
+        for (int i = start2; i < start2 + BLAST_REGION_LEN; i++) {
+            if (dir2 == 1){
+                auto idx = 2*BLAST_REGION_LEN - (i-start2) - 1;
+                variant->bnd_seq[idx] = seq[i];
+                auto c = variant->bnd_seq[199];
+                auto k = 3;
+            }
+            else
+                variant->bnd_seq[i - start2 + BLAST_REGION_LEN] = seq[i];
+        }
     }
 
     for (int i = variant->position - BLAST_REGION_LEN; i < variant->position + BLAST_REGION_LEN; i++) {
