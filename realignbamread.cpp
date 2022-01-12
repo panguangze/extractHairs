@@ -4,7 +4,7 @@
 #include "realign_pairHMM.h"
 int MIN_QUAL = 10;
 
-float BLAST_RATIO = 0.85;
+float BLAST_RATIO = 0.90;
 int MINLEN= 8;
 int COMPLEXITY_K = 5; // anchor sequences must have unique kmers of this length
 int SHORT_HAP_CUTOFF = 20; // separation between variants to be considered part of the same local haplotype for realignment
