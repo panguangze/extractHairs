@@ -142,6 +142,15 @@ int parse_bnd(VARIANT *variant, int chromosome)
         return 0;
     }
 
+    if (strcmp(variant->AA, "<INV>") == 0) { //for TODO, if have insertion seq, distance = svlen
+        variant->bnd_type = BND_INV;
+        variant->bnd_mate_chrom = variant->chrom;
+        variant->bnd_mate_pos = variant->position + 1;
+        variant->bnd_pair_distance = 200;
+        free(bnd_str);
+        return 0;
+    }
+
     if (strchr(ori_bnd_str, '[') != NULL)
     {
         if (ori_bnd_str[0] == '[')
@@ -204,6 +213,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
     variant->H1 = 0;
     variant->H2 = 0;
     variant->phase_set = 0;
+    variant->bnd_sv_len = 0;
 
     const char *chrom = bcf_seqname(header, record);
     variant->chrom = (char*) malloc(strlen(chrom) +1);
@@ -267,8 +277,15 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
     if (record->pos == 853473) {
         int m = 2;
     }
-    if (ninfo < 0)
-        variant->bnd = 0;
+    if (ninfo < 0) {
+        int *svlen = 0;
+        ninfo = bcf_get_info_int32(header, record, "SVLEN", &svlen, &ninfo_arr);
+        if (ninfo < 0)
+            variant->bnd = 0;
+        else {
+            variant->bnd = 1;
+        }
+    }
     else {
         if (std::strcmp(info, "SNV") == 0 || std::strcmp(info, "snv") == 0) {
             variant->bnd = 0;
@@ -346,12 +363,18 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                 variant->position++; // add one to position for indels
         }
         else {
-            int end_info;
-            int end_info_arr = 0;
-//            ninfo = bcf_get_info_string(header, record, "AC", &end_info, &end_info_arr);
-//            if (ninfo != 0)
-//                variant->bnd_mate_pos = end_info;
-//            free(end_info);
+            int *sv_len = 0;
+            int sv_len_info_arr = 0;
+            ninfo = bcf_get_info_int32(header, record, "SVLEN", &sv_len, &sv_len_info_arr);
+            if (ninfo != 0)
+                variant->bnd_sv_len = *sv_len;
+            if (strcmp(variant->AA, "<INS>") == 0) {
+                char * insSeq = nullptr;
+                int info_arr= 0;
+                ninfo = bcf_get_info_string(header, record, "INS_SEQ", &insSeq, &sv_len_info_arr);
+                if (ninfo != 0)
+                    variant->bnd_ins_seq = insSeq;
+            }
             parse_bnd(variant, chromosome);
         }
         
@@ -434,7 +457,7 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
     {
         bcf_unpack(record, BCF_UN_ALL);
         het = parse_variant_hts(&varlist[i], record, header, chromosomes);
-        if(varlist[i].bnd == 1) {
+        if(varlist[i].bnd == 1 && varlist[i].heterozygous != '0') {
 //            TODO, here delimiter only work for svaba
             char* token = strtok(varlist[i].id, ":");
             if (BNDs.find(token) == BNDs.end()) {
@@ -561,7 +584,7 @@ void bnd_to_ref_seq(VARIANT *variant, REFLIST* reflist, int chromosome) {
         fprintf(stderr, "bug here at position %i", variant->position);
         exit(1);
     }
-
+    if(variant->ref_seq != nullptr) return;
     char *ori_bnd_str = variant->allele2;
 //    char *bnd_str = (char*) malloc(strlen(variant->allele2) + 1);
 //    strcpy(bnd_str, variant->allele2);
@@ -582,7 +605,11 @@ void bnd_to_ref_seq(VARIANT *variant, REFLIST* reflist, int chromosome) {
 
     char* seq = reinterpret_cast<char *>(reflist->sequences[chromosome]);
 //    auto mm = new char[2*BLAST_REGION_LEN];
-    variant->bnd_seq = new char[2*BLAST_REGION_LEN];
+    if (variant->bnd_type == BND_INS) {
+        variant->bnd_seq = new char[BLAST_REGION_LEN + strlen(variant->bnd_ins_seq)];
+    } else {
+        variant->bnd_seq = new char[2*BLAST_REGION_LEN];
+    }
     variant->ref_seq = new char[2*BLAST_REGION_LEN];
     if (variant->bnd_type != BND_INS) {
         for (int i = start1; i < start1 + BLAST_REGION_LEN; i++) {
@@ -602,13 +629,24 @@ void bnd_to_ref_seq(VARIANT *variant, REFLIST* reflist, int chromosome) {
             else
                 variant->bnd_seq[i - start2 + BLAST_REGION_LEN] = seq[i];
         }
+    } else {
+        if (variant->bnd_ins_seq != nullptr) {
+            for (int i = variant->position - BLAST_REGION_LEN; i < variant->position; i++)
+                variant->bnd_seq[i - (variant->position - BLAST_REGION_LEN)] = seq[i];
+            for (int i = 0 ; i < strlen(variant->bnd_ins_seq); i++) {
+                variant->bnd_seq[i + BLAST_REGION_LEN - 1] = variant->bnd_seq[i];
+            }
+        }
     }
 
     for (int i = variant->position - BLAST_REGION_LEN; i < variant->position + BLAST_REGION_LEN; i++) {
         variant->ref_seq[i - (variant->position - BLAST_REGION_LEN)] = seq[i];
     }
-    variant->bnd_seq[2*BLAST_REGION_LEN] = '\000';
-    variant->ref_seq[2*BLAST_REGION_LEN] = '\000';
+//    if(variant->bnd_type == BND_INS) {
+//        variant->bnd_seq[BLAST_REGION_LEN + strlen(variant->bnd_ins_seq)] = '\000';
+//    } else
+//        variant->bnd_seq[2*BLAST_REGION_LEN] = '\000';
+//    variant->ref_seq[2*BLAST_REGION_LEN] = '\000';
 }
 
 

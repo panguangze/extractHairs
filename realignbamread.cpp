@@ -4,7 +4,7 @@
 #include "realign_pairHMM.h"
 int MIN_QUAL = 10;
 
-float BLAST_RATIO = 0.90;
+float BLAST_RATIO = 0.85;
 int MINLEN= 8;
 int COMPLEXITY_K = 5; // anchor sequences must have unique kmers of this length
 int SHORT_HAP_CUTOFF = 20; // separation between variants to be considered part of the same local haplotype for realignment
@@ -601,35 +601,115 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
 		// BUG: encountered problem where insertion of size I, with a SNV at pos z < l2+ol,
 		// would accidenally try to be handled even though the insertion doesn't actually reach the SNV
 		// currently restricting to non-insertions
-		if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF || op == BAM_CDEL) //|| op == BAM_CINS)
-		{
-			len_a1 = strlen(varlist[ss].allele1);
-			len_a2 = strlen(varlist[ss].allele2);
+		if (true) //|| op == BAM_CINS)
+		{   if (varlist[ss].bnd == 1) {
+                if (varlist[ss].bnd_type == BND_INS) {
+                    len_a1 = 1;
+                    len_a2 = varlist[ss].bnd_sv_len;
+                } else {
+                    len_a1 = varlist[ss].bnd_sv_len;
+                    len_a2 = 1;
+                }
+            } else {
+                len_a1 = strlen(varlist[ss].allele1);
+                len_a2 = strlen(varlist[ss].allele2);
+            }
 			while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position >= l2 && varlist[ss].position < l2 + ol){ // so that the read is long enough to span an indel
+                if (ss == 1495) {
+                    auto m =4;
+                }
+				if (read->position == 813633 && ss == 71) {
+					int mk = 4;
+				}
+//                TODO bnd_type.
                 if (varlist[ss].bnd == 1) {
-                    bnd_to_ref_seq(&varlist[ss], reflist, reflist->current);
+
+//                    len_a1 = varlist[ss].
+					bnd_to_ref_seq(&varlist[ss], reflist, reflist->current);
 //                    auto tm = varlist[ss].bnd_seq[199];
-                    float bnd_score = 0;
-                    float ref_score = 0;
-                    if (varlist[ss].bnd_type == BND_INS) { //insertion, TODO, if have insertion seq, bnd alignment
-                        bnd_score = 0;
-                        ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
-                    } else {
-                        bnd_score = blast_score(varlist[ss].bnd_seq, read->sequence);
-                        ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
-                    }
-                    if (bnd_score > ref_score && bnd_score >= BLAST_RATIO) {
+					float bnd_score = 0.5;
+					float ref_score = 0.5;
+					if (varlist[ss].bnd_type == BND_INS) { //insertion, TODO, if have insertion seq, bnd alignment
+						if (varlist[ss].bnd_seq != nullptr) {
+							bnd_score = blast_score(varlist[ss].bnd_seq, read->sequence);
+						}
+						ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
+					} else {
+						bnd_score = blast_score(varlist[ss].bnd_seq, read->sequence);
+						ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
+					}
+
+
+					//TODO need carefully recheck
+					// realign previous snps
+//					if (left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN) {
+//						if (n_variants > 0){
+//							// if we aren't parsing INDELs, make sure this short haplotype has at least one SNV
+//							// call allelotyping function
+//							if (n_snvs > 0 || PARSEINDELS) compare_read_HAPs(read,varlist,snplst,n_variants,hap_pos,fcigarlist,fcigs,f1,f2,reflist,fragment);
+//							// empty the current cluster of variants
+//							n_variants = 0; n_snvs=0;
+//							for (j=0; j < 5; j++)hap_pos[j] = -1;
+//						}
+//					}
+
+                    if ((bnd_score > ref_score && bnd_score >= BLAST_RATIO && bnd_score - ref_score > 0.15)
+								|| (varlist[ss].bnd_seq == nullptr && varlist[ss].bnd_type == BND_INS && ref_score < 0.52)) {
+						//TODO need carefully recheck
+						// realign previous snps
+						if (n_variants == 0){
+							hap_pos[0] = l1;
+							hap_pos[1] = l2;
+							f1 = i;
+						}
+
+						// currently just adding the indel value to the ends of the boundaries
+						// the ends might not match up perfectly, ideally we want to maintain a position we have to reach,
+						// given the (possibly) large indels we've seen, and continue
+						// parsing the CIGAR in the normal way until we've well passed that position
+//TODO, 我们需要考虑两个断点的左右,确定加len_a1还是1
+//						if (varlist[ss].bnd_pos < varlist[ss].bnd_mate_pos) {
+//							if (len_a1 > len_a2){ // deletion
+//								if (l1 + len_a1 > hap_pos[2]) hap_pos[2] = l1 + len_a1;
+//								if (l2 + len_a1 > hap_pos[3]) hap_pos[3] = l2 + len_a1;
+//								prev_snp_position = varlist[ss].position + len_a1;
+//							}else{  // insertion
+//								if (l1 + len_a2 > hap_pos[2]) hap_pos[2] = l1 + len_a2;
+//								if (l2 + len_a2 > hap_pos[3]) hap_pos[3] = l2 + len_a2;
+//								prev_snp_position = varlist[ss].position + len_a2;
+//							}
+//						} else {
+//							if (len_a1 > len_a2){ // deletion
+//								if (l1 + len_a1 > hap_pos[2]) hap_pos[2] = l1 + 1;
+//								if (l2 + len_a1 > hap_pos[3]) hap_pos[3] = l2 + 1;
+//								prev_snp_position = varlist[ss].position + 1;
+//							}else{  // insertion
+//								if (l1 + len_a2 > hap_pos[2]) hap_pos[2] = l1 + 1;
+//								if (l2 + len_a2 > hap_pos[3]) hap_pos[3] = l2 + 1;
+//								prev_snp_position = varlist[ss].position + 1;
+//							}
+//						}
+//						f2 = i; hap_pos[4] = l2;
+						// add variant to the list
+//                    snplst[n_variants] = ss; // no check on length of this list, not needed
+//                    calculate_rightshift(varlist, ss, reflist); // no need to do it multiple times..
+//                    if (varlist[ss].type ==0) n_snvs++;
+//                    n_variants++;
+
+
                         fragment->alist[fragment->variants].varid = ss;
                         fragment->alist[fragment->variants].allele = '1';
-                        fragment->alist[fragment->variants].qv = read->quality[l1];
+                        int score = (int)(bnd_score * (float)read->quality[l1]);
+                        fragment->alist[fragment->variants].qv = '0'+score;
                         fragment->variants++;
                         varlist[ss].depth++;
                         if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
                         else varlist[ss].A2 += 1;
-                    } else if (ref_score > bnd_score && ref_score >= BLAST_RATIO) {
+                    } else if ((ref_score > bnd_score && ((ref_score >= BLAST_RATIO + 0.05 && varlist[ss].bnd_type == BND_INS) || (ref_score >= BLAST_RATIO && varlist[ss].bnd_type != BND_INS))  && ref_score - bnd_score > 0.15)) {
                         fragment->alist[fragment->variants].varid = ss;
                         fragment->alist[fragment->variants].allele = '0';
-                        fragment->alist[fragment->variants].qv = read->quality[l1];
+                        int score = (int)(ref_score * (float)read->quality[l1]);
+                        fragment->alist[fragment->variants].qv = '0' + (char)score;
                         fragment->variants++;
                         varlist[ss].depth++;
                         if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
@@ -639,7 +719,8 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
 //                        free(varlist->bnd_seq);
 //                    if(varlist->ref_seq != nullptr)
 //                        free(varlist->ref_seq);
-                }else if (left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN && varlist[ss].bnd == 0) {
+
+                }else if ((left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN && varlist[ss].bnd == 0) && (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF || op == BAM_CDEL)) {
                     if (varlist[ss].heterozygous >= '1' || HOMOZYGOUS ==1){
                         //fprintf(stderr,"%d %s",varlist[ss].position, varlist[ss].allele1, varlist[ss].allele2);
                         // If this variant is far away from the last variant, then analyze the cluster of variants seen up til now
@@ -684,10 +765,10 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
                     }
                 }
                 ss++;
-                if (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].bnd != 1){
-                    len_a1 = strlen(varlist[ss].allele1);
-                    len_a2 = strlen(varlist[ss].allele2);
-                }
+//                if (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].bnd != 1){
+//                    len_a1 = strlen(varlist[ss].allele1);
+//                    len_a2 = strlen(varlist[ss].allele2);
+//                }
 			}
 		}
 
@@ -761,39 +842,83 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
 //}
 
 float blast_score(const char* seq1, const char* seq2) {
+//    StripedSmithWaterman::Aligner aligner(1,1,1,0);
+//    auto *alignm = new StripedSmithWaterman::Alignment();
+//    auto *alignm2 = new StripedSmithWaterman::Alignment();
+//    auto *alignm3 = new StripedSmithWaterman::Alignment();
+//    auto *alignm4 = new StripedSmithWaterman::Alignment();
+//
+//    StripedSmithWaterman::Filter filter;
+//    aligner.Align(seq1, seq2, strlen(seq2), filter, alignm, strlen(seq2)/2);
     EdlibAlignResult result = edlibAlign(seq1, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
     int s1 = 2 * BLAST_REGION_LEN, s2 = 2 * BLAST_REGION_LEN, s3 = 2 * BLAST_REGION_LEN, s4 = 2 * BLAST_REGION_LEN;
-    if (result.status == EDLIB_STATUS_OK) {
-        s1 = result.editDistance;
-    }
-
-    edlibFreeAlignResult(result);
+	int align1 = 2 * BLAST_REGION_LEN, align2 = 2 * BLAST_REGION_LEN, align3 = 2 * BLAST_REGION_LEN, align4 = 2 * BLAST_REGION_LEN;
+	if (result.status == EDLIB_STATUS_OK) {
+		s1 = result.editDistance;
+		align1 = result.alignmentLength;
+	}
+	edlibFreeAlignResult(result);
     auto rev = reverse_dna(seq1);
-//    auto rev = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
+//    aligner.Align(rev, seq2, strlen(seq2), filter, alignm2, strlen(seq2)/2);
+
+////    auto rev = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
     result = edlibAlign(rev, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
     if (result.status == EDLIB_STATUS_OK) {
         s2 = result.editDistance;
+		align2 = result.alignmentLength;
     }
     edlibFreeAlignResult(result);
     auto dna_r = complement_dna(seq1);
+//    aligner.Align(dna_r, seq2, strlen(seq2), filter, alignm3, strlen(seq2)/2);
+
     result = edlibAlign(dna_r, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
     if (result.status == EDLIB_STATUS_OK) {
         s3 = result.editDistance;
-    }
+		align3 = result.alignmentLength;
+	}
     edlibFreeAlignResult(result);
+
     auto c_r = complement_dna(rev);
+//    aligner.Align(c_r, seq2, strlen(seq2), filter, alignm4, strlen(seq2)/2);
+
     result = edlibAlign(c_r, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
     if (result.status == EDLIB_STATUS_OK) {
         s4 = result.editDistance;
-    }
+		align4 = result.alignmentLength;
+	}
     edlibFreeAlignResult(result);
+//    auto s1 = alignm->sw_score;
+//    auto s2 = alignm2->sw_score;
+//    auto s3 = alignm3->sw_score;
+//    auto s4 = alignm4->sw_score;
+//    free(alignm);
+//    free(alignm2);
+//    free(alignm3);
+//    free(alignm4);
+
     free(rev);
     free(c_r);
     free(dna_r);
-    int min = s1 < s2 ? s1:s2;
-    min = min < s3? min : s3;
-    min = min < s4? min : s4;
-    return (float)(2* BLAST_REGION_LEN - min)/(float)(2*BLAST_REGION_LEN);
+    int min = 0;
+	int minAlign = 0;
+
+	if (s1 < s2) {
+		min = s1;
+		minAlign = align1;
+	} else {
+		min = s2;
+		minAlign = align2;
+	}
+	if (min > s3) {
+		min = s3;
+		minAlign = align3;
+	}
+	if (min > s4) {
+		min = s4;
+		minAlign = align4;
+	}
+
+    return (float)(2*BLAST_REGION_LEN - min)/(float)(minAlign);
 }
 char* reverse_dna(const char* s) {
     char* tmp = new char[2*BLAST_REGION_LEN];

@@ -135,9 +135,12 @@ int fetch_func(const bam1_t *b, void *data, bam_hdr_t *header, struct alignedrea
 }
 
 void free_readmemory(struct alignedread* read) {
+    free(read->quality);
+
     free(read->readid);
     free(read->sequence);
-    free(read->quality);
+//    if (read->quality == nullptr)
+//        int k = 3;
     free(read->barcode);
     if (read->cigs > 0) free(read->cigarlist);
 }

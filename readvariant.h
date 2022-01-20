@@ -30,6 +30,8 @@ extern int MINBNDIS;
 #define BNDTYPE_MUTLIPLE_MATE 2
 #define BNDTYPE_INTRA_CHROMOSOME 3
 #define BND_INS 4
+#define BND_INV 5
+#define BND_DEL 6
 
 #define BNDDIRECT_TRP 0
 #define BNDDIRECT_TLP 1 
@@ -64,6 +66,8 @@ typedef struct {
     int bnd_type;
     int bnd_direction;
     int bnd_mate_pos;
+    int bnd_sv_len;
+    char * bnd_ins_seq;
     char * bnd_mate_chrom;
     char* bnd_seq; // sequence around bnd site
     char* ref_seq;

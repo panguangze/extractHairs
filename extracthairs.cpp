@@ -7,6 +7,7 @@
 #include<string.h>
 #include<limits.h>
 #include <unordered_map>
+#include "vector"
 //#define _GNU_SOURCE
 #include <htslib/sam.h>
 
@@ -80,6 +81,8 @@ int NEW_FORMAT = 0;
 
 int PRINT_COMPACT = 1; // 1= print each fragment block by block, 0 = print variant by variant
 
+//extract for specific contigs
+std::vector<std::string> INPUT_CONTIGS;
 //int get_chrom_name(struct alignedread* read,HASHTABLE* ht,REFLIST* reflist);
 
 #include "parsebamread.h"
@@ -98,6 +101,19 @@ Align_Params* AP; // global alignmnet params
 void print_options();
 int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, REFLIST* reflist);
 
+void set_contigs(std::string &s, std::vector<std::string> &contigs) {
+    size_t pos = 0;
+    std::string token;
+    if ((pos = s.find(',')) == std::string::npos){
+        contigs.push_back(s);
+        return;
+    }
+    while ((pos = s.find(',')) != std::string::npos) {
+        token = s.substr(0, pos);
+        contigs.push_back(token);
+        s.erase(0, pos + 1);
+    }
+}
 void print_options() {
     fprintf(stderr, "\nExtract haplotype informative reads (HAIRS) from coordinate sorted BAM files \n\n");
     fprintf(stderr, "./extractHAIRS [options] --bam reads.sorted.bam --VCF variants.VCF --out fragment_file \n\n");
@@ -129,7 +145,9 @@ void print_options() {
     //fprintf(stderr, "--region <chr:start-end> : chromosome and region in BAM file, useful to process individual chromosomes or genomic regions \n");
     fprintf(stderr, "--ep <0/1> : set to 1 to estimate HMM parameters from aligned reads (only with long reads), default = 0\n");
 	fprintf(stderr, "--hom <0/1> : set to 1 to include homozygous variants for processing, default = 0 (only heterozygous) \n\n");
-	//fprintf(stderr, "--sumall <0/1> : set to 1 to use sum of all local alignments approach (only with long reads), default = 1 \n\n");
+    fprintf(stderr, "--contigs <contig names> : extract for specific contigs, split with comma\n");
+
+    //fprintf(stderr, "--sumall <0/1> : set to 1 to use sum of all local alignments approach (only with long reads), default = 1 \n\n");
     //fprintf(stderr,"--out : output file for haplotype informative fragments (hairs)\n\n");
 }
 
@@ -173,6 +191,13 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     }
     bam1_t *b = bam_init1();
     bam_hdr_t *header = sam_hdr_read(fp);
+
+//    if INPUT_CONTIGS, iter specific contigs
+//    if (!INPUT_CONTIGS.empty()) {
+//        sam_itr_querys()
+//        hts_parse_reg
+//
+//    }
 
     while (sam_read1(fp, header, b) >= 0) {
         fetch_func(b, fp, header, read);
@@ -322,6 +347,10 @@ int main(int argc, char** argv) {
             readsorted = atoi(argv[i + 1]);
         }
         else if (strcmp(argv[i], "--mmq") == 0) MIN_MQ = atoi(argv[i + 1]);
+        else if (strcmp(argv[i], "--contigs") == 0) {
+            std::string tmp_s = std::string (argv[i + 1]);
+            set_contigs(tmp_s, INPUT_CONTIGS);
+        }
         else if (strcmp(argv[i], "--HiC") == 0 || strcmp(argv[i], "--hic") == 0){
             check_input_0_or_1(argv[i + 1]);
             if (atoi(argv[i + 1])){
@@ -504,6 +533,10 @@ int main(int argc, char** argv) {
             read_fasta(fastafile, reflist);
         }
     }
+//TODO, temporary
+    if (MATE_AT_SAME){
+        print_mate_bnd_fragment(BNDs, fragment_file);
+    }
 
 //    for (const auto& bnd : BNDs) {
 //        auto idx = bnd.second.first - 1;
@@ -517,9 +550,6 @@ int main(int argc, char** argv) {
             else parse_ok = parse_bamfile_fosmid(bamfilelist[i], &ht, chromvars, varlist, reflist); // fosmid pool bam file
 			if (parse_ok != 0) return parse_ok;
         }
-    }
-    if (MATE_AT_SAME){
-        print_mate_bnd_fragment(BNDs, fragment_file);
     }
 //        free(&BNDs);
 
