@@ -12,6 +12,7 @@
 #include <htslib/vcf.h>
 #include <htslib/tbx.h>
 #include <unordered_map>
+#include <map>
 #include <string>
 
 extern FILE* fragment_file; // FILE to which the fragments will be output, if NULL, output to stdout
@@ -23,6 +24,7 @@ extern int PRINT_FRAGMENTS;
 extern bool VCF_PHASED;
 extern int MATE_AT_SAME;
 extern int MINBNDIS;
+extern char* SUPPORT_READS_TAG;
 //int VARIANTS = 0;
 
 #define BNDTYPE_PAIRED 0
@@ -40,6 +42,8 @@ extern int MINBNDIS;
 
 extern int BND_RANGE;
 extern int BLAST_REGION_LEN;
+
+extern std::map<std::string, int> SUPPORT_READS;
 
 typedef struct {
     char* id;           //variant id

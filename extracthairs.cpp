@@ -84,6 +84,8 @@ int PRINT_COMPACT = 1; // 1= print each fragment block by block, 0 = print varia
 //extract for specific contigs
 std::vector<std::string> INPUT_CONTIGS;
 //int get_chrom_name(struct alignedread* read,HASHTABLE* ht,REFLIST* reflist);
+std::map<std::string, int> SUPPORT_READS;
+char* SUPPORT_READS_TAG;
 
 #include "parsebamread.h"
 #include "realignbamread.h"
@@ -113,6 +115,9 @@ void set_contigs(std::string &s, std::vector<std::string> &contigs) {
         contigs.push_back(token);
         s.erase(0, pos + 1);
     }
+}
+void parse_fragments(HASHTABLE* reads) {
+
 }
 void print_options() {
     fprintf(stderr, "\nExtract haplotype informative reads (HAIRS) from coordinate sorted BAM files \n\n");
@@ -146,7 +151,8 @@ void print_options() {
     fprintf(stderr, "--ep <0/1> : set to 1 to estimate HMM parameters from aligned reads (only with long reads), default = 0\n");
 	fprintf(stderr, "--hom <0/1> : set to 1 to include homozygous variants for processing, default = 0 (only heterozygous) \n\n");
     fprintf(stderr, "--contigs <contig names> : extract for specific contigs, split with comma\n");
-
+    fprintf(stderr, "--support_read_tag <INFO tag> : where the support reads at vcf tag\n");
+//    fprintf(stderr, "--support_read_tag <INFO tag> : where the support reads at vcf tag\n");
     //fprintf(stderr, "--sumall <0/1> : set to 1 to use sum of all local alignments approach (only with long reads), default = 1 \n\n");
     //fprintf(stderr,"--out : output file for haplotype informative fragments (hairs)\n\n");
 }
@@ -233,6 +239,16 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 
 
         fragment.absIS = (read->IS < 0) ? -1 * read->IS : read->IS;
+        if (SUPPORT_READS_TAG != nullptr && SUPPORT_READS.find(std::string(read->readid)) != SUPPORT_READS.end()) {
+            auto pos = SUPPORT_READS[std::string(read->readid)];
+            fragment.alist[fragment.variants].varid = pos;
+            fragment.alist[fragment.variants].allele = '1';
+            fragment.alist[fragment.variants].qv = 60;
+            fragment.variants++;
+            varlist[pos].depth++;
+            if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
+            else varlist[pos].A2 += 1;
+        }
         // add check to see if the mate and its read are on same chromosome, bug for contigs, july 16 2012
         if ((read->flag & 8) || fragment.absIS > MAX_IS || fragment.absIS < MIN_IS || read->IS == 0 || !(read->flag & 1) || read->tid != read->mtid) // single read
         {
@@ -447,7 +463,10 @@ int main(int argc, char** argv) {
 			if (HOMOZYGOUS ==1) SINGLEREADS = 1; 
 		}
          else if (strcmp(argv[i], "--mbq") == 0) MINQ = atoi(argv[i + 1]);
-        else if (strcmp(argv[i], "--noquality") == 0){
+        else if (strcmp(argv[i], "--support_read_tag") == 0) {
+            SUPPORT_READS_TAG = (char*) malloc(1024);
+            strcpy(SUPPORT_READS_TAG, argv[i + 1]);
+        }else if (strcmp(argv[i], "--noquality") == 0){
             check_input_0_or_1(argv[i + 1]);
             MISSING_QV = atoi(argv[i + 1]);
         }else if (strcmp(argv[i], "--triallelic") == 0){

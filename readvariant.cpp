@@ -9,6 +9,7 @@
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
 #include <unordered_map>
+#include <sstream>
 
 int count_variants_hts(char* vcffile, char* sampleid, int* samplecol){
     vcfFile *fp;
@@ -133,14 +134,14 @@ int parse_bnd(VARIANT *variant, int chromosome)
     char *pch;
     pch = strtok(bnd_str, "][:");
 
-    if (strcmp(variant->AA, "<INS>") == 0) { //for TODO, if have insertion seq, distance = svlen
-        variant->bnd_type = BND_INS;
-        variant->bnd_mate_chrom = variant->chrom;
-        variant->bnd_mate_pos = variant->position + 1;
-        variant->bnd_pair_distance = 200;
-        free(bnd_str);
-        return 0;
-    }
+//    if (strcmp(variant->AA, "<INS>") == 0) { //for TODO, if have insertion seq, distance = svlen
+//        variant->bnd_type = BND_INS;
+//        variant->bnd_mate_chrom = variant->chrom;
+//        variant->bnd_mate_pos = variant->position + 1;
+//        variant->bnd_pair_distance = 200;
+//        free(bnd_str);
+//        return 0;
+//    }
 
     if (strcmp(variant->AA, "<INV>") == 0) { //for TODO, if have insertion seq, distance = svlen
         variant->bnd_type = BND_INV;
@@ -363,17 +364,25 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                 variant->position++; // add one to position for indels
         }
         else {
-            int *sv_len = 0;
-            int sv_len_info_arr = 0;
-            ninfo = bcf_get_info_int32(header, record, "SVLEN", &sv_len, &sv_len_info_arr);
-            if (ninfo != 0)
-                variant->bnd_sv_len = *sv_len;
-            if (strcmp(variant->AA, "<INS>") == 0) {
-                char * insSeq = nullptr;
-                int info_arr= 0;
-                ninfo = bcf_get_info_string(header, record, "INS_SEQ", &insSeq, &sv_len_info_arr);
-                if (ninfo != 0)
-                    variant->bnd_ins_seq = insSeq;
+            char *support_reads;
+            int support_reads_info_arr = 0;
+            ninfo = bcf_get_info_int32(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
+//            if (ninfo != 0)
+//                variant->bnd_sv_len = *sv_len;
+//            if (strcmp(variant->AA, "<INS>") == 0) {
+//                char * insSeq = nullptr;
+//                int info_arr= 0;
+//                ninfo = bcf_get_info_string(header, record, "INS_SEQ", &insSeq, &sv_len_info_arr);
+//                if (ninfo != 0)
+//                    variant->bnd_ins_seq = insSeq;
+//            }
+            std::string tmp_reads = support_reads;
+            std::stringstream ss(support_reads);
+            while( ss.good() )
+            {
+                std::string substr;
+                getline( ss, substr, ',' );
+                SUPPORT_READS.emplace(substr, record->pos);
             }
             parse_bnd(variant, chromosome);
         }
@@ -457,7 +466,7 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
     {
         bcf_unpack(record, BCF_UN_ALL);
         het = parse_variant_hts(&varlist[i], record, header, chromosomes);
-        if(varlist[i].bnd == 1 && varlist[i].heterozygous != '0') {
+        if(varlist[i].bnd == 1 && varlist[i].heterozygous != '0' && SUPPORT_READS_TAG != nullptr) {
 //            TODO, here delimiter only work for svaba
             char* token = strtok(varlist[i].id, ":");
             if (BNDs.find(token) == BNDs.end()) {

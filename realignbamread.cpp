@@ -602,11 +602,11 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
 		// would accidenally try to be handled even though the insertion doesn't actually reach the SNV
 		// currently restricting to non-insertions
 		if (true) //|| op == BAM_CINS)
-		{   if (varlist[ss].bnd == 1) {
+		{   if (varlist[ss].bnd == 1 && SUPPORT_READS_TAG != nullptr) {
                 if (varlist[ss].bnd_type == BND_INS) {
                     len_a1 = 1;
                     len_a2 = varlist[ss].bnd_sv_len;
-                } else {
+                } else if(SUPPORT_READS_TAG != nullptr) {
                     len_a1 = varlist[ss].bnd_sv_len;
                     len_a2 = 1;
                 }
@@ -615,14 +615,14 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
                 len_a2 = strlen(varlist[ss].allele2);
             }
 			while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position >= l2 && varlist[ss].position < l2 + ol){ // so that the read is long enough to span an indel
-                if (ss == 1495) {
-                    auto m =4;
-                }
-				if (read->position == 813633 && ss == 71) {
-					int mk = 4;
-				}
+//                if (ss == 1495) {
+//                    auto m =4;
+//                }
+//				if (read->position == 813633 && ss == 71) {
+//					int mk = 4;
+//				}
 //                TODO bnd_type.
-                if (varlist[ss].bnd == 1) {
+                if (varlist[ss].bnd == 1 && SUPPORT_READS_TAG != nullptr) {
 
 //                    len_a1 = varlist[ss].
 					bnd_to_ref_seq(&varlist[ss], reflist, reflist->current);

@@ -285,9 +285,9 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         while (varlist[ss].position < start + l2 && ss <= chromvars[chrom].last) ss++;
         op = read->cigarlist[i]&0xf;
         ol = read->cigarlist[i] >> 4;
-        if(ss == 281850) {
-            int m = 000;
-        }
+//        if(ss == 281850) {
+//            int m = 000;
+//        }
 
         if (op == BAM_CMATCH) {
             while (ss <= chromvars[chrom].last && varlist[ss].position >= start + l2 && varlist[ss].position < start + l2 + ol) {
@@ -344,7 +344,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
             }
             l2 += ol;
         } else if (op == BAM_CREF_SKIP) l2 += ol;
-        else if (op == BAM_CSOFT_CLIP) // primary alignment
+        else if (SUPPORT_READS_TAG == nullptr && op == BAM_CSOFT_CLIP) // primary alignment
         {
             support_ref_bnd_reads = false;
 
@@ -365,7 +365,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
             }
             l1 += ol;
         }
-        else if (op == BAM_CHARD_CLIP) // secondary alignment ,notice that this is quite uncommon for reads with leght less than 150bp
+        else if (SUPPORT_READS_TAG == nullptr && op == BAM_CHARD_CLIP) // secondary alignment ,notice that this is quite uncommon for reads with leght less than 150bp
         {
             support_ref_bnd_reads = false;
 
@@ -387,7 +387,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         }
     }
 
-if (PARSEBND && DATA_TYPE == 1)
+if (SUPPORT_READS_TAG == nullptr && PARSEBND && DATA_TYPE == 1)
 {//this works for het SV BND only 
 
     // start - 300
@@ -448,7 +448,7 @@ if (PARSEBND && DATA_TYPE == 1)
             }
         }
     }
-if(PARSEBND) {
+if(PARSEBND && SUPPORT_READS_TAG == nullptr) {
     if(support_ref_bnd_reads) {
         fragment->alist[fragment->variants].varid = bnd_ss;
         fragment->alist[fragment->variants].allele = '0';
