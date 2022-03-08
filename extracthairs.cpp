@@ -239,16 +239,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 
 
         fragment.absIS = (read->IS < 0) ? -1 * read->IS : read->IS;
-        if (SUPPORT_READS_TAG != nullptr && SUPPORT_READS.find(std::string(read->readid)) != SUPPORT_READS.end()) {
-            auto pos = SUPPORT_READS[std::string(read->readid)];
-            fragment.alist[fragment.variants].varid = pos;
-            fragment.alist[fragment.variants].allele = '1';
-            fragment.alist[fragment.variants].qv = 60;
-            fragment.variants++;
-            varlist[pos].depth++;
-            if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
-            else varlist[pos].A2 += 1;
-        }
+
         // add check to see if the mate and its read are on same chromosome, bug for contigs, july 16 2012
         if ((read->flag & 8) || fragment.absIS > MAX_IS || fragment.absIS < MIN_IS || read->IS == 0 || !(read->flag & 1) || read->tid != read->mtid) // single read
         {
@@ -261,6 +252,19 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 				fragment.read_qual = read->mquality;
 				fragment.rescued = read->rescued;
 				fragment.dm = read->dm;
+
+                if (SUPPORT_READS_TAG != nullptr && SUPPORT_READS.find(std::string(read->readid)) != SUPPORT_READS.end()) {
+                    auto pos = SUPPORT_READS[std::string(read->readid)];
+                    fragment.alist[fragment.variants].varid = pos;
+                    fragment.alist[fragment.variants].allele = '1';
+                    fragment.alist[fragment.variants].qv = 60;
+                    fragment.variants++;
+                    varlist[pos].depth++;
+                    if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
+                    else varlist[pos].A2 += 1;
+                }
+
+
                 if (REALIGN_VARIANTS){
                     realign_and_extract_variants_read(read,ht,chromvars,varlist,0,&fragment,chrom,reflist);
                 }else{
@@ -278,7 +282,16 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 			fragment.read_qual = read->mquality;
 			fragment.rescued = read->rescued;
             fragment.dm = read->dm;
-
+            if (SUPPORT_READS_TAG != nullptr && SUPPORT_READS.find(std::string(read->readid)) != SUPPORT_READS.end()) {
+                auto pos = SUPPORT_READS[std::string(read->readid)];
+                fragment.alist[fragment.variants].varid = pos;
+                fragment.alist[fragment.variants].allele = '1';
+                fragment.alist[fragment.variants].qv = 60;
+                fragment.variants++;
+                varlist[pos].depth++;
+                if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
+                else varlist[pos].A2 += 1;
+            }
             if (chrom >=0) extract_variants_read(read,ht,chromvars,varlist,1,&fragment,chrom,reflist);
 
             //fprintf(stderr,"paired read stats %s %d flag %d IS %d\n",read->chrom,read->cigs,read->flag,read->IS);
@@ -553,9 +566,9 @@ int main(int argc, char** argv) {
         }
     }
 //TODO, temporary
-    if (MATE_AT_SAME){
-        print_mate_bnd_fragment(BNDs, fragment_file);
-    }
+//    if (MATE_AT_SAME){
+//        print_mate_bnd_fragment(BNDs, fragment_file);
+//    }
 
 //    for (const auto& bnd : BNDs) {
 //        auto idx = bnd.second.first - 1;

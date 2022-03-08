@@ -206,7 +206,7 @@ int parse_bnd(VARIANT *variant, int chromosome)
     return 0;
 }
 
-int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header, int chromosome)
+int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header, int chromosome, int variant_ss)
 {
     variant->depth = 0;
     variant->A1 = 0;
@@ -283,7 +283,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
         ninfo = bcf_get_info_int32(header, record, "SVLEN", &svlen, &ninfo_arr);
         if (ninfo < 0)
             variant->bnd = 0;
-        else {
+        else if(*svlen > 1) {
             variant->bnd = 1;
         }
     }
@@ -364,9 +364,10 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                 variant->position++; // add one to position for indels
         }
         else {
-            char *support_reads;
+            char *support_reads = NULL;
             int support_reads_info_arr = 0;
-            ninfo = bcf_get_info_int32(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
+            int sninfo = 0;
+            sninfo = bcf_get_info_string(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
 //            if (ninfo != 0)
 //                variant->bnd_sv_len = *sv_len;
 //            if (strcmp(variant->AA, "<INS>") == 0) {
@@ -382,7 +383,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
             {
                 std::string substr;
                 getline( ss, substr, ',' );
-                SUPPORT_READS.emplace(substr, record->pos);
+                SUPPORT_READS.emplace(substr, variant_ss);
             }
             parse_bnd(variant, chromosome);
         }
@@ -465,7 +466,7 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
     while (bcf_read1(fp, header, record) >= 0)
     {
         bcf_unpack(record, BCF_UN_ALL);
-        het = parse_variant_hts(&varlist[i], record, header, chromosomes);
+        het = parse_variant_hts(&varlist[i], record, header, chromosomes, i+1);
         if(varlist[i].bnd == 1 && varlist[i].heterozygous != '0' && SUPPORT_READS_TAG != nullptr) {
 //            TODO, here delimiter only work for svaba
             char* token = strtok(varlist[i].id, ":");
