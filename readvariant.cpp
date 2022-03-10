@@ -466,7 +466,7 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
     while (bcf_read1(fp, header, record) >= 0)
     {
         bcf_unpack(record, BCF_UN_ALL);
-        het = parse_variant_hts(&varlist[i], record, header, chromosomes, i+1);
+        het = parse_variant_hts(&varlist[i], record, header, chromosomes, i);
         if(varlist[i].bnd == 1 && varlist[i].heterozygous != '0' && SUPPORT_READS_TAG != nullptr) {
 //            TODO, here delimiter only work for svaba
             char* token = strtok(varlist[i].id, ":");
