@@ -208,6 +208,9 @@ int parse_bnd(VARIANT *variant, int chromosome)
 
 int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header, int chromosome, int variant_ss)
 {
+    if(record->pos == 189391) {
+        int id = 99;
+    }
     variant->depth = 0;
     variant->A1 = 0;
     variant->A2 = 0;

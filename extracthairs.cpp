@@ -208,10 +208,10 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     while (sam_read1(fp, header, b) >= 0) {
         fetch_func(b, fp, header, read);
         // notice that supplementary reads is not dropped 
-        if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)) || read->mquality < MIN_MQ) {
-            free_readmemory(read);
-            continue;
-        }
+//        if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)) || read->mquality < MIN_MQ) {
+//            free_readmemory(read);
+//            continue;
+//        }
         // find the chromosome in reflist that matches read->chrom if the previous chromosome is different from current chromosome
         if (read->tid != prevtid) {
         chrom = getindex(ht,read->chrom);  // this will return -1 if the contig name is not  in the VCF file 
