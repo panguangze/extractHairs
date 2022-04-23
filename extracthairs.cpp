@@ -83,6 +83,7 @@ int PRINT_COMPACT = 1; // 1= print each fragment block by block, 0 = print varia
 
 //extract for specific contigs
 std::vector<std::string> INPUT_CONTIGS;
+std::string INPUT_CONTIGS_STR;
 //int get_chrom_name(struct alignedread* read,HASHTABLE* ht,REFLIST* reflist);
 std::map<std::string, int> SUPPORT_READS;
 char* SUPPORT_READS_TAG;
@@ -199,13 +200,37 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     bam_hdr_t *header = sam_hdr_read(fp);
 
 //    if INPUT_CONTIGS, iter specific contigs
-//    if (!INPUT_CONTIGS.empty()) {
-//        sam_itr_querys()
-//        hts_parse_reg
-//
+    hts_itr_t *iter=NULL;
+    hts_idx_t *idx=NULL;
+
+    idx = sam_index_load(fp,  bamfile);
+
+    if (!INPUT_CONTIGS.empty()) {
+
+        if(idx==NULL) return -1;
+        iter  = sam_itr_querys(idx, header, INPUT_CONTIGS_STR.c_str());
+
+//        b = bam_init1();
+//        while ( sam_itr_next(in, iter, b) >= 0)
+//        {
+//            fputs("DO STUFF\n",stdout);
+//        }
+//        hts_itr_destroy(iter);
+//        bam_destroy1(b);
+//        bam_hdr_destroy(header);
+//        sam_close(in);
+//        return 0;
+    }
+
+
 //    }
 
-    while (sam_read1(fp, header, b) >= 0) {
+    while (true) {
+        if (iter != nullptr) {
+            if (sam_itr_next(fp, iter, b) <0) break;
+        } else {
+            if (sam_read1(fp,header,b) < 0) break;
+        }
         fetch_func(b, fp, header, read);
         // notice that supplementary reads is not dropped 
 //        if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)) || read->mquality < MIN_MQ) {
@@ -330,6 +355,8 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         if (prevchrom >=0) clean_fragmentlist(flist, &fragments, varlist, -1, read->position, prevchrom); // added extra filter 03/08/18
     }
     bam_destroy1(b);
+    if (iter != nullptr)
+    sam_itr_destroy(iter);
     bam_hdr_destroy(header);
     free(flist); free(read); free(fragment.alist);
     if (REALIGN_VARIANTS) free(fcigarlist);
@@ -378,6 +405,7 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[i], "--mmq") == 0) MIN_MQ = atoi(argv[i + 1]);
         else if (strcmp(argv[i], "--contigs") == 0) {
             std::string tmp_s = std::string (argv[i + 1]);
+            INPUT_CONTIGS_STR = tmp_s;
             set_contigs(tmp_s, INPUT_CONTIGS);
         }
         else if (strcmp(argv[i], "--HiC") == 0 || strcmp(argv[i], "--hic") == 0){

@@ -223,7 +223,11 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
     variant->chrom = (char*) malloc(strlen(chrom) +1);
     strcpy(variant->chrom, chrom);
     variant->id = (char*) malloc(strlen(record->d.id) + 1);
+
     strcpy(variant->id, record->d.id);
+    if (strcmp(variant->id, "Sniffles2.INS.39FS1")==0) {
+        int jjdd=0;
+    }
     variant->position = record->pos + 1;
     //fprintf(stderr, "%d\n", record->pos);
     variant->altalleles =  record->n_allele - 1;
@@ -247,11 +251,17 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
     }
     char t = bcf_gt_allele(gt[0]);
 //    fixme for gvcf genotype ./. t = -1
-    if (t == -1) return 0;
-    variant->genotype[0] = bcf_gt_allele(gt[0]) + '0';
-    variant->genotype[1] = '/';
-    variant->genotype[2] = bcf_gt_allele(gt[1]) + '0';
-    variant->genotype[3] = '\0';
+    if (t == -1) {
+        variant->genotype[0] = '0';
+        variant->genotype[1] = '/';
+        variant->genotype[2] = '0';
+        variant->genotype[3] = '\0';
+    } else {
+        variant->genotype[0] = bcf_gt_allele(gt[0]) + '0';
+        variant->genotype[1] = '/';
+        variant->genotype[2] = bcf_gt_allele(gt[1]) + '0';
+        variant->genotype[3] = '\0';
+    }
     
     free(gt); 
     int gt_len = strlen(variant->genotype);
