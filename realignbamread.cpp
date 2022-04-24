@@ -535,261 +535,407 @@ int compare_read_HAPs(struct alignedread* read,VARIANT* varlist,int* snplst, int
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// identify the variants that overlap the read and call the local realignment function (compare_read_HAP) for "clusters of variants" (1 to MAX_SNP) 
-
 int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHROMVARS* chromvars,VARIANT* varlist,int paired,FRAGMENT* fragment,int chrom,REFLIST* reflist)
 {
-	int* snplst = (int*) malloc(MAX_SNPs_SHORT_HAP*2*sizeof(int));
-	int start = read->position; int end = start + read->span; int ss=0,firstvar=0,j=0,ov=0, i=0;
-	// int k=0, has_a_SNV = 0;
-	j = (int)(start/BSIZE);
-	if (j >= chromvars[chrom].blocks) return 0; 
-	ss = chromvars[chrom].intervalmap[j];
-	if (ss < 0 || ss >= VARIANTS) return 0;
+    int* snplst = (int*) malloc(MAX_SNPs_SHORT_HAP*2*sizeof(int));
+    int start = read->position; int end = start + read->span; int ss=0,firstvar=0,j=0,ov=0, i=0;
+    // int k=0, has_a_SNV = 0;
+    j = (int)(start/BSIZE);
+    if (j >= chromvars[chrom].blocks) return 0;
+    ss = chromvars[chrom].intervalmap[j];
+    if (ss < 0 || ss >= VARIANTS) return 0;
 
-	// check if ss is less than first variant for the chromosome 'chrom', if so assign it to the first variant
-	if (ss < chromvars[chrom].first) ss = chromvars[chrom].first;
-	if (varlist[ss].position <= end)
-	{
-		while(ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position < start) ss++;
-		firstvar = ss;
-		while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position <= end) // BUG fixed 12/03/18, VARIANTS-1 => VARIANTS
-		{
-			ov++; ss++;
-		}
-	}
-	if ((paired ==0 && ov < 2 && SINGLEREADS ==0) || (paired ==0 && ov < 1 && SINGLEREADS ==1) || (paired ==1 && ov < 1)) return 0;
-	ss = firstvar; // use variable firstvar to store first variant that overlaps this read
+    // check if ss is less than first variant for the chromosome 'chrom', if so assign it to the first variant
+    if (ss < chromvars[chrom].first) ss = chromvars[chrom].first;
+    if (varlist[ss].position <= end)
+    {
+        while(ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position < start) ss++;
+        firstvar = ss;
+        while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position <= end) // BUG fixed 12/03/18, VARIANTS-1 => VARIANTS
+        {
+            ov++; ss++;
+        }
+    }
+    if ((paired ==0 && ov < 2 && SINGLEREADS ==0) || (paired ==0 && ov < 1 && SINGLEREADS ==1) || (paired ==1 && ov < 1)) return 0;
+    ss = firstvar; // use variable firstvar to store first variant that overlaps this read
 
-	int fcigs= parse_cigar(read,reflist,fcigarlist);
-	if (VERBOSE)
-	{
-		//for (i=0;i<fcigs;i++) fprintf(stdout,"%d%c ",fcigarlist[i]>>4,INT_CIGAROP[fcigarlist[i]&0xf]); fprintf(stdout," readstart %d\n",read->position);
-	}
+    int fcigs= parse_cigar(read,reflist,fcigarlist);
+    if (VERBOSE)
+    {
+        //for (i=0;i<fcigs;i++) fprintf(stdout,"%d%c ",fcigarlist[i]>>4,INT_CIGAROP[fcigarlist[i]&0xf]); fprintf(stdout," readstart %d\n",read->position);
+    }
 
-	int l1=0,l2=read->position; // l1 is advance on read, l2 is advance on reference genome
-	int hap_pos[5] = {-1,-1,-1,-1,-1};
-	// hap_pos[0] is advance on read for first variant in haplotype
-	// hap_pos[1] is advance on ref for first variant in haplotype
-	// hap_pos[2] is advance on read for last variant in haplotype
-	// hap_pos[3] is advance on ref for last variant in haplotype
-        // hap_pos[4] is ...
+    int l1=0,l2=read->position; // l1 is advance on read, l2 is advance on reference genome
+    int hap_pos[5] = {-1,-1,-1,-1,-1};
+    // hap_pos[0] is advance on read for first variant in haplotype
+    // hap_pos[1] is advance on ref for first variant in haplotype
+    // hap_pos[2] is advance on read for last variant in haplotype
+    // hap_pos[3] is advance on ref for last variant in haplotype
+    // hap_pos[4] is ...
 
-	int op=0,ol=0;
-	int n_variants = 0; int n_snvs=0;
-	int prev_snp_position = -1;
-	int f1=0,f2=0;
-	int len_a1 = 0, len_a2 = 0;
-	int left_on_read = 0;
+    int op=0,ol=0;
+    int n_variants = 0; int n_snvs=0;
+    int prev_snp_position = -1;
+    int f1=0,f2=0;
+    int len_a1 = 0, len_a2 = 0;
+    int left_on_read = 0;
 
-	for (i=0;i<fcigs;i++)
-	{
-		op = fcigarlist[i]&0xf; ol = fcigarlist[i]>>4;
-		if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF)left_on_read += ol;
-		else if (op == BAM_CINS || op == BAM_CSOFT_CLIP)left_on_read += ol;
-	}
+    for (i=0;i<fcigs;i++)
+    {
+        op = fcigarlist[i]&0xf; ol = fcigarlist[i]>>4;
+        if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF)left_on_read += ol;
+        else if (op == BAM_CINS || op == BAM_CSOFT_CLIP)left_on_read += ol;
+    }
 
-	if(VERBOSE) fprintf(stderr,"\n\n.........processing read start-pos=%d...%d overlapping %d variants, firstvar=%d \n",read->position,end,ov,firstvar+1);
-	for (i=0;i<fcigs;i++)
-	{
-		while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position < l2) ss++;
-		if (ss > chromvars[chrom].last || ss >= VARIANTS) break;
-		op = fcigarlist[i]&0xf; ol = fcigarlist[i]>>4;
+    if(VERBOSE) fprintf(stderr,"\n\n.........processing read start-pos=%d...%d overlapping %d variants, firstvar=%d \n",read->position,end,ov,firstvar+1);
+    for (i=0;i<fcigs;i++)
+    {
+        while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position < l2) ss++;
+        if (ss > chromvars[chrom].last || ss >= VARIANTS) break;
+        op = fcigarlist[i]&0xf; ol = fcigarlist[i]>>4;
 
-		//if (VERBOSE) fprintf(stderr,"read %d %d%c l1 %d l2 %d \n",i,ol,INT_CIGAROP[op],l1,l2);
+        //if (VERBOSE) fprintf(stderr,"read %d %d%c l1 %d l2 %d \n",i,ol,INT_CIGAROP[op],l1,l2);
 
-		// BUG: encountered problem where insertion of size I, with a SNV at pos z < l2+ol,
-		// would accidenally try to be handled even though the insertion doesn't actually reach the SNV
-		// currently restricting to non-insertions
-		if (true) //|| op == BAM_CINS)
-		{   if (varlist[ss].bnd == 1 && SUPPORT_READS_TAG != nullptr) {
-                if (varlist[ss].bnd_type == BND_INS) {
-                    len_a1 = 1;
-                    len_a2 = varlist[ss].bnd_sv_len;
-                } else if(SUPPORT_READS_TAG != nullptr) {
-                    len_a1 = varlist[ss].bnd_sv_len;
-                    len_a2 = 1;
-                }
-            } else {
-                len_a1 = strlen(varlist[ss].allele1);
-                len_a2 = strlen(varlist[ss].allele2);
-            }
-			while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position >= l2 && varlist[ss].position < l2 + ol){ // so that the read is long enough to span an indel
-//                if (ss == 1495) {
-//                    auto m =4;
-//                }
-//				if (read->position == 813633 && ss == 71) {
-//					int mk = 4;
-//				}
-//                TODO bnd_type.
-                if (varlist[ss].bnd == 1 && SUPPORT_READS_TAG != nullptr) {
+        // BUG: encountered problem where insertion of size I, with a SNV at pos z < l2+ol,
+        // would accidenally try to be handled even though the insertion doesn't actually reach the SNV
+        // currently restricting to non-insertions
+        if(varlist[ss].bnd == 1) {
+            ss++;
+            continue;
+        }
+        if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF || op == BAM_CDEL) //|| op == BAM_CINS)
+        {
+            len_a1 = strlen(varlist[ss].allele1);
+            len_a2 = strlen(varlist[ss].allele2);
+            while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position >= l2 && varlist[ss].position < l2 + ol
+                   && left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN){ // so that the read is long enough to span an indel
 
-//                    len_a1 = varlist[ss].
-					bnd_to_ref_seq(&varlist[ss], reflist, reflist->current);
-//                    auto tm = varlist[ss].bnd_seq[199];
-					float bnd_score = 0.5;
-					float ref_score = 0.5;
-					if (varlist[ss].bnd_type == BND_INS) { //insertion, TODO, if have insertion seq, bnd alignment
-						if (varlist[ss].bnd_seq != nullptr) {
-							bnd_score = blast_score(varlist[ss].bnd_seq, read->sequence);
-						}
-						ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
-					} else {
-						bnd_score = blast_score(varlist[ss].bnd_seq, read->sequence);
-						ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
-					}
+                if (varlist[ss].heterozygous >= '1' || HOMOZYGOUS ==1){
+                    //fprintf(stderr,"%d %s",varlist[ss].position, varlist[ss].allele1, varlist[ss].allele2);
+                    // If this variant is far away from the last variant, then analyze the cluster of variants seen up til now
+                    if (n_variants > 0 && ((varlist[ss].position - prev_snp_position > SHORT_HAP_CUTOFF) || (n_variants >= MAX_SNPs_SHORT_HAP))){
 
-
-					//TODO need carefully recheck
-					// realign previous snps
-//					if (left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN) {
-//						if (n_variants > 0){
-//							// if we aren't parsing INDELs, make sure this short haplotype has at least one SNV
-//							// call allelotyping function
-//							if (n_snvs > 0 || PARSEINDELS) compare_read_HAPs(read,varlist,snplst,n_variants,hap_pos,fcigarlist,fcigs,f1,f2,reflist,fragment);
-//							// empty the current cluster of variants
-//							n_variants = 0; n_snvs=0;
-//							for (j=0; j < 5; j++)hap_pos[j] = -1;
-//						}
-//					}
-
-                    if ((bnd_score > ref_score && bnd_score >= BLAST_RATIO && bnd_score - ref_score > 0.15)
-								|| (varlist[ss].bnd_seq == nullptr && varlist[ss].bnd_type == BND_INS && ref_score < 0.52)) {
-						//TODO need carefully recheck
-						// realign previous snps
-						if (n_variants == 0){
-							hap_pos[0] = l1;
-							hap_pos[1] = l2;
-							f1 = i;
-						}
-
-						// currently just adding the indel value to the ends of the boundaries
-						// the ends might not match up perfectly, ideally we want to maintain a position we have to reach,
-						// given the (possibly) large indels we've seen, and continue
-						// parsing the CIGAR in the normal way until we've well passed that position
-//TODO, 我们需要考虑两个断点的左右,确定加len_a1还是1
-//						if (varlist[ss].bnd_pos < varlist[ss].bnd_mate_pos) {
-//							if (len_a1 > len_a2){ // deletion
-//								if (l1 + len_a1 > hap_pos[2]) hap_pos[2] = l1 + len_a1;
-//								if (l2 + len_a1 > hap_pos[3]) hap_pos[3] = l2 + len_a1;
-//								prev_snp_position = varlist[ss].position + len_a1;
-//							}else{  // insertion
-//								if (l1 + len_a2 > hap_pos[2]) hap_pos[2] = l1 + len_a2;
-//								if (l2 + len_a2 > hap_pos[3]) hap_pos[3] = l2 + len_a2;
-//								prev_snp_position = varlist[ss].position + len_a2;
-//							}
-//						} else {
-//							if (len_a1 > len_a2){ // deletion
-//								if (l1 + len_a1 > hap_pos[2]) hap_pos[2] = l1 + 1;
-//								if (l2 + len_a1 > hap_pos[3]) hap_pos[3] = l2 + 1;
-//								prev_snp_position = varlist[ss].position + 1;
-//							}else{  // insertion
-//								if (l1 + len_a2 > hap_pos[2]) hap_pos[2] = l1 + 1;
-//								if (l2 + len_a2 > hap_pos[3]) hap_pos[3] = l2 + 1;
-//								prev_snp_position = varlist[ss].position + 1;
-//							}
-//						}
-//						f2 = i; hap_pos[4] = l2;
-						// add variant to the list
-//                    snplst[n_variants] = ss; // no check on length of this list, not needed
-//                    calculate_rightshift(varlist, ss, reflist); // no need to do it multiple times..
-//                    if (varlist[ss].type ==0) n_snvs++;
-//                    n_variants++;
-
-
-                        fragment->alist[fragment->variants].varid = ss;
-                        fragment->alist[fragment->variants].allele = '1';
-                        int score = (int)(bnd_score * (float)read->quality[l1]);
-                        fragment->alist[fragment->variants].qv = '0'+score;
-                        fragment->variants++;
-                        varlist[ss].depth++;
-                        if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
-                        else varlist[ss].A2 += 1;
-                    } else if ((ref_score > bnd_score && ((ref_score >= BLAST_RATIO + 0.05 && varlist[ss].bnd_type == BND_INS) || (ref_score >= BLAST_RATIO && varlist[ss].bnd_type != BND_INS))  && ref_score - bnd_score > 0.15)) {
-                        fragment->alist[fragment->variants].varid = ss;
-                        fragment->alist[fragment->variants].allele = '0';
-                        int score = (int)(ref_score * (float)read->quality[l1]);
-                        fragment->alist[fragment->variants].qv = '0' + (char)score;
-                        fragment->variants++;
-                        varlist[ss].depth++;
-                        if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
-                        else varlist[ss].A2 += 1;
+                        // if we aren't parsing INDELs, make sure this short haplotype has at least one SNV
+                        // call allelotyping function
+                        if (n_snvs > 0 || PARSEINDELS) compare_read_HAPs(read,varlist,snplst,n_variants,hap_pos,fcigarlist,fcigs,f1,f2,reflist,fragment);
+                        // empty the current cluster of variants
+                        n_variants = 0; n_snvs=0;
+                        for (j=0; j < 5; j++)hap_pos[j] = -1;
                     }
-//                    if(varlist->bnd_seq != nullptr)
-//                        free(varlist->bnd_seq);
-//                    if(varlist->ref_seq != nullptr)
-//                        free(varlist->ref_seq);
 
-                }else if ((left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN && varlist[ss].bnd == 0) && (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF || op == BAM_CDEL)) {
-                    if (varlist[ss].heterozygous >= '1' || HOMOZYGOUS ==1){
-                        //fprintf(stderr,"%d %s",varlist[ss].position, varlist[ss].allele1, varlist[ss].allele2);
-                        // If this variant is far away from the last variant, then analyze the cluster of variants seen up til now
-                        if (n_variants > 0 && ((varlist[ss].position - prev_snp_position > SHORT_HAP_CUTOFF) || (n_variants >= MAX_SNPs_SHORT_HAP))){
-
-                            // if we aren't parsing INDELs, make sure this short haplotype has at least one SNV
-                            // call allelotyping function
-                            if (n_snvs > 0 || PARSEINDELS) compare_read_HAPs(read,varlist,snplst,n_variants,hap_pos,fcigarlist,fcigs,f1,f2,reflist,fragment);
-                            // empty the current cluster of variants
-                            n_variants = 0; n_snvs=0;
-                            for (j=0; j < 5; j++)hap_pos[j] = -1;
-                        }
-
-                        if (n_variants == 0){
-                            hap_pos[0] = l1;
-                            hap_pos[1] = l2;
-                            f1 = i;
-                        }
-
-                        // currently just adding the indel value to the ends of the boundaries
-                        // the ends might not match up perfectly, ideally we want to maintain a position we have to reach,
-                        // given the (possibly) large indels we've seen, and continue
-                        // parsing the CIGAR in the normal way until we've well passed that position
-                        len_a1 = strlen(varlist[ss].allele1);
-                        len_a2 = strlen(varlist[ss].allele2);
-                        if (len_a1 > len_a2){ // deletion
-                            if (l1 + len_a1 > hap_pos[2]) hap_pos[2] = l1 + len_a1;
-                            if (l2 + len_a1 > hap_pos[3]) hap_pos[3] = l2 + len_a1;
-                            prev_snp_position = varlist[ss].position + len_a1;
-                        }else{  // insertion
-                            if (l1 + len_a2 > hap_pos[2]) hap_pos[2] = l1 + len_a2;
-                            if (l2 + len_a2 > hap_pos[3]) hap_pos[3] = l2 + len_a2;
-                            prev_snp_position = varlist[ss].position + len_a2;
-                        }
-
-                        f2 = i; hap_pos[4] = l2;
-                        // add variant to the list
-                        snplst[n_variants] = ss; // no check on length of this list, not needed
-                        calculate_rightshift(varlist, ss, reflist); // no need to do it multiple times..
-                        if (varlist[ss].type ==0) n_snvs++;
-                        n_variants++;
+                    if (n_variants == 0){
+                        hap_pos[0] = l1;
+                        hap_pos[1] = l2;
+                        f1 = i;
                     }
+
+                    // currently just adding the indel value to the ends of the boundaries
+                    // the ends might not match up perfectly, ideally we want to maintain a position we have to reach,
+                    // given the (possibly) large indels we've seen, and continue
+                    // parsing the CIGAR in the normal way until we've well passed that position
+                    len_a1 = strlen(varlist[ss].allele1);
+                    len_a2 = strlen(varlist[ss].allele2);
+                    if (len_a1 > len_a2){ // deletion
+                        if (l1 + len_a1 > hap_pos[2]) hap_pos[2] = l1 + len_a1;
+                        if (l2 + len_a1 > hap_pos[3]) hap_pos[3] = l2 + len_a1;
+                        prev_snp_position = varlist[ss].position + len_a1;
+                    }else{  // insertion
+                        if (l1 + len_a2 > hap_pos[2]) hap_pos[2] = l1 + len_a2;
+                        if (l2 + len_a2 > hap_pos[3]) hap_pos[3] = l2 + len_a2;
+                        prev_snp_position = varlist[ss].position + len_a2;
+                    }
+
+                    f2 = i; hap_pos[4] = l2;
+                    // add variant to the list
+                    snplst[n_variants] = ss; // no check on length of this list, not needed
+                    calculate_rightshift(varlist, ss, reflist); // no need to do it multiple times..
+                    if (varlist[ss].type ==0) n_snvs++;
+                    n_variants++;
                 }
                 ss++;
-//                if (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].bnd != 1){
-//                    len_a1 = strlen(varlist[ss].allele1);
-//                    len_a2 = strlen(varlist[ss].allele2);
-//                }
-			}
-		}
+                if (ss < VARIANTS && ss <= chromvars[chrom].last){
+                    len_a1 = strlen(varlist[ss].allele1);
+                    len_a2 = strlen(varlist[ss].allele2);
+                }
+            }
+        }
 
-		if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF){
-			l1 += ol;
-			l2 += ol;
-			left_on_read -= ol;
-		}
-		else if (op == BAM_CINS || op == BAM_CSOFT_CLIP){
-			l1 += ol;
-			left_on_read -= ol;
-		}else if (op == BAM_CDEL || op == BAM_CREF_SKIP){
-			l2 += ol;
-		}
-	}
-	// might have a straggler variant left over
-	if(n_variants > 0 && (n_snvs > 0 || PARSEINDELS)) compare_read_HAPs(read,varlist,snplst,n_variants,hap_pos,fcigarlist,fcigs,f1,f2,reflist,fragment);
-	free(snplst);
+        if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF){
+            l1 += ol;
+            l2 += ol;
+            left_on_read -= ol;
+        }
+        else if (op == BAM_CINS || op == BAM_CSOFT_CLIP){
+            l1 += ol;
+            left_on_read -= ol;
+        }else if (op == BAM_CDEL || op == BAM_CREF_SKIP){
+            l2 += ol;
+        }
+    }
+    // might have a straggler variant left over
+    if(n_variants > 0 && (n_snvs > 0 || PARSEINDELS)) compare_read_HAPs(read,varlist,snplst,n_variants,hap_pos,fcigarlist,fcigs,f1,f2,reflist,fragment);
+    free(snplst);
 
-	return 0;
+    return 0;
 }
+
+
+
+// identify the variants that overlap the read and call the local realignment function (compare_read_HAP) for "clusters of variants" (1 to MAX_SNP) 
+
+//int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHROMVARS* chromvars,VARIANT* varlist,int paired,FRAGMENT* fragment,int chrom,REFLIST* reflist)
+//{
+//	int* snplst = (int*) malloc(MAX_SNPs_SHORT_HAP*2*sizeof(int));
+//	int start = read->position; int end = start + read->span; int ss=0,firstvar=0,j=0,ov=0, i=0;
+//	// int k=0, has_a_SNV = 0;
+//	j = (int)(start/BSIZE);
+//	if (j >= chromvars[chrom].blocks) return 0;
+//	ss = chromvars[chrom].intervalmap[j];
+//	if (ss < 0 || ss >= VARIANTS) return 0;
+//
+//	// check if ss is less than first variant for the chromosome 'chrom', if so assign it to the first variant
+//	if (ss < chromvars[chrom].first) ss = chromvars[chrom].first;
+//	if (varlist[ss].position <= end)
+//	{
+//		while(ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position < start) ss++;
+//		firstvar = ss;
+//		while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position <= end) // BUG fixed 12/03/18, VARIANTS-1 => VARIANTS
+//		{
+//			ov++; ss++;
+//		}
+//	}
+//	if ((paired ==0 && ov < 2 && SINGLEREADS ==0) || (paired ==0 && ov < 1 && SINGLEREADS ==1) || (paired ==1 && ov < 1)) return 0;
+//	ss = firstvar; // use variable firstvar to store first variant that overlaps this read
+//
+//	int fcigs= parse_cigar(read,reflist,fcigarlist);
+//	if (VERBOSE)
+//	{
+//		//for (i=0;i<fcigs;i++) fprintf(stdout,"%d%c ",fcigarlist[i]>>4,INT_CIGAROP[fcigarlist[i]&0xf]); fprintf(stdout," readstart %d\n",read->position);
+//	}
+//
+//	int l1=0,l2=read->position; // l1 is advance on read, l2 is advance on reference genome
+//	int hap_pos[5] = {-1,-1,-1,-1,-1};
+//	// hap_pos[0] is advance on read for first variant in haplotype
+//	// hap_pos[1] is advance on ref for first variant in haplotype
+//	// hap_pos[2] is advance on read for last variant in haplotype
+//	// hap_pos[3] is advance on ref for last variant in haplotype
+//        // hap_pos[4] is ...
+//
+//	int op=0,ol=0;
+//	int n_variants = 0; int n_snvs=0;
+//	int prev_snp_position = -1;
+//	int f1=0,f2=0;
+//	int len_a1 = 0, len_a2 = 0;
+//	int left_on_read = 0;
+//
+//	for (i=0;i<fcigs;i++)
+//	{
+//		op = fcigarlist[i]&0xf; ol = fcigarlist[i]>>4;
+//		if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF)left_on_read += ol;
+//		else if (op == BAM_CINS || op == BAM_CSOFT_CLIP)left_on_read += ol;
+//	}
+//
+//	if(VERBOSE) fprintf(stderr,"\n\n.........processing read start-pos=%d...%d overlapping %d variants, firstvar=%d \n",read->position,end,ov,firstvar+1);
+//	for (i=0;i<fcigs;i++)
+//	{
+//		while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position < l2) ss++;
+//		if (ss > chromvars[chrom].last || ss >= VARIANTS) break;
+//		op = fcigarlist[i]&0xf; ol = fcigarlist[i]>>4;
+//
+//		//if (VERBOSE) fprintf(stderr,"read %d %d%c l1 %d l2 %d \n",i,ol,INT_CIGAROP[op],l1,l2);
+//
+//		// BUG: encountered problem where insertion of size I, with a SNV at pos z < l2+ol,
+//		// would accidenally try to be handled even though the insertion doesn't actually reach the SNV
+//		// currently restricting to non-insertions
+//		if (true) //|| op == BAM_CINS)
+//		{   if (varlist[ss].bnd == 1 && SUPPORT_READS_TAG != nullptr) {
+//                if (varlist[ss].bnd_type == BND_INS) {
+//                    len_a1 = 1;
+//                    len_a2 = varlist[ss].bnd_sv_len;
+//                } else if(SUPPORT_READS_TAG != nullptr) {
+//                    len_a1 = varlist[ss].bnd_sv_len;
+//                    len_a2 = 1;
+//                }
+//            } else {
+//                len_a1 = strlen(varlist[ss].allele1);
+//                len_a2 = strlen(varlist[ss].allele2);
+//            }
+//			while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position >= l2 && varlist[ss].position < l2 + ol){ // so that the read is long enough to span an indel
+////                if (ss == 1495) {
+////                    auto m =4;
+////                }
+////				if (read->position == 813633 && ss == 71) {
+////					int mk = 4;
+////				}
+////                TODO bnd_type.
+//                if (varlist[ss].bnd == 1 && SUPPORT_READS_TAG != nullptr) {
+//
+////                    len_a1 = varlist[ss].
+//					bnd_to_ref_seq(&varlist[ss], reflist, reflist->current);
+////                    auto tm = varlist[ss].bnd_seq[199];
+//					float bnd_score = 0.5;
+//					float ref_score = 0.5;
+//					if (varlist[ss].bnd_type == BND_INS) { //insertion, TODO, if have insertion seq, bnd alignment
+//						if (varlist[ss].bnd_seq != nullptr) {
+//							bnd_score = blast_score(varlist[ss].bnd_seq, read->sequence);
+//						}
+//						ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
+//					} else {
+//						bnd_score = blast_score(varlist[ss].bnd_seq, read->sequence);
+//						ref_score = blast_score(varlist[ss].ref_seq, read->sequence);
+//					}
+//
+//
+//					//TODO need carefully recheck
+//					// realign previous snps
+////					if (left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN) {
+////						if (n_variants > 0){
+////							// if we aren't parsing INDELs, make sure this short haplotype has at least one SNV
+////							// call allelotyping function
+////							if (n_snvs > 0 || PARSEINDELS) compare_read_HAPs(read,varlist,snplst,n_variants,hap_pos,fcigarlist,fcigs,f1,f2,reflist,fragment);
+////							// empty the current cluster of variants
+////							n_variants = 0; n_snvs=0;
+////							for (j=0; j < 5; j++)hap_pos[j] = -1;
+////						}
+////					}
+//
+//                    if ((bnd_score > ref_score && bnd_score >= BLAST_RATIO && bnd_score - ref_score > 0.15)
+//								|| (varlist[ss].bnd_seq == nullptr && varlist[ss].bnd_type == BND_INS && ref_score < 0.52)) {
+//						//TODO need carefully recheck
+//						// realign previous snps
+//						if (n_variants == 0){
+//							hap_pos[0] = l1;
+//							hap_pos[1] = l2;
+//							f1 = i;
+//						}
+//
+//						// currently just adding the indel value to the ends of the boundaries
+//						// the ends might not match up perfectly, ideally we want to maintain a position we have to reach,
+//						// given the (possibly) large indels we've seen, and continue
+//						// parsing the CIGAR in the normal way until we've well passed that position
+////TODO, 我们需要考虑两个断点的左右,确定加len_a1还是1
+////						if (varlist[ss].bnd_pos < varlist[ss].bnd_mate_pos) {
+////							if (len_a1 > len_a2){ // deletion
+////								if (l1 + len_a1 > hap_pos[2]) hap_pos[2] = l1 + len_a1;
+////								if (l2 + len_a1 > hap_pos[3]) hap_pos[3] = l2 + len_a1;
+////								prev_snp_position = varlist[ss].position + len_a1;
+////							}else{  // insertion
+////								if (l1 + len_a2 > hap_pos[2]) hap_pos[2] = l1 + len_a2;
+////								if (l2 + len_a2 > hap_pos[3]) hap_pos[3] = l2 + len_a2;
+////								prev_snp_position = varlist[ss].position + len_a2;
+////							}
+////						} else {
+////							if (len_a1 > len_a2){ // deletion
+////								if (l1 + len_a1 > hap_pos[2]) hap_pos[2] = l1 + 1;
+////								if (l2 + len_a1 > hap_pos[3]) hap_pos[3] = l2 + 1;
+////								prev_snp_position = varlist[ss].position + 1;
+////							}else{  // insertion
+////								if (l1 + len_a2 > hap_pos[2]) hap_pos[2] = l1 + 1;
+////								if (l2 + len_a2 > hap_pos[3]) hap_pos[3] = l2 + 1;
+////								prev_snp_position = varlist[ss].position + 1;
+////							}
+////						}
+////						f2 = i; hap_pos[4] = l2;
+//						// add variant to the list
+////                    snplst[n_variants] = ss; // no check on length of this list, not needed
+////                    calculate_rightshift(varlist, ss, reflist); // no need to do it multiple times..
+////                    if (varlist[ss].type ==0) n_snvs++;
+////                    n_variants++;
+//
+//
+//                        fragment->alist[fragment->variants].varid = ss;
+//                        fragment->alist[fragment->variants].allele = '1';
+//                        int score = (int)(bnd_score * (float)read->quality[l1]);
+//                        fragment->alist[fragment->variants].qv = '0'+score;
+//                        fragment->variants++;
+//                        varlist[ss].depth++;
+//                        if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+//                        else varlist[ss].A2 += 1;
+//                    } else if ((ref_score > bnd_score && ((ref_score >= BLAST_RATIO + 0.05 && varlist[ss].bnd_type == BND_INS) || (ref_score >= BLAST_RATIO && varlist[ss].bnd_type != BND_INS))  && ref_score - bnd_score > 0.15)) {
+//                        fragment->alist[fragment->variants].varid = ss;
+//                        fragment->alist[fragment->variants].allele = '0';
+//                        int score = (int)(ref_score * (float)read->quality[l1]);
+//                        fragment->alist[fragment->variants].qv = '0' + (char)score;
+//                        fragment->variants++;
+//                        varlist[ss].depth++;
+//                        if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+//                        else varlist[ss].A2 += 1;
+//                    }
+////                    if(varlist->bnd_seq != nullptr)
+////                        free(varlist->bnd_seq);
+////                    if(varlist->ref_seq != nullptr)
+////                        free(varlist->ref_seq);
+//
+//                }else if ((left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN && varlist[ss].bnd == 0) && (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF || op == BAM_CDEL)) {
+//                    if (varlist[ss].heterozygous >= '1' || HOMOZYGOUS ==1){
+//                        //fprintf(stderr,"%d %s",varlist[ss].position, varlist[ss].allele1, varlist[ss].allele2);
+//                        // If this variant is far away from the last variant, then analyze the cluster of variants seen up til now
+//                        if (n_variants > 0 && ((varlist[ss].position - prev_snp_position > SHORT_HAP_CUTOFF) || (n_variants >= MAX_SNPs_SHORT_HAP))){
+//
+//                            // if we aren't parsing INDELs, make sure this short haplotype has at least one SNV
+//                            // call allelotyping function
+//                            if (n_snvs > 0 || PARSEINDELS) compare_read_HAPs(read,varlist,snplst,n_variants,hap_pos,fcigarlist,fcigs,f1,f2,reflist,fragment);
+//                            // empty the current cluster of variants
+//                            n_variants = 0; n_snvs=0;
+//                            for (j=0; j < 5; j++)hap_pos[j] = -1;
+//                        }
+//
+//                        if (n_variants == 0){
+//                            hap_pos[0] = l1;
+//                            hap_pos[1] = l2;
+//                            f1 = i;
+//                        }
+//
+//                        // currently just adding the indel value to the ends of the boundaries
+//                        // the ends might not match up perfectly, ideally we want to maintain a position we have to reach,
+//                        // given the (possibly) large indels we've seen, and continue
+//                        // parsing the CIGAR in the normal way until we've well passed that position
+//                        len_a1 = strlen(varlist[ss].allele1);
+//                        len_a2 = strlen(varlist[ss].allele2);
+//                        if (len_a1 > len_a2){ // deletion
+//                            if (l1 + len_a1 > hap_pos[2]) hap_pos[2] = l1 + len_a1;
+//                            if (l2 + len_a1 > hap_pos[3]) hap_pos[3] = l2 + len_a1;
+//                            prev_snp_position = varlist[ss].position + len_a1;
+//                        }else{  // insertion
+//                            if (l1 + len_a2 > hap_pos[2]) hap_pos[2] = l1 + len_a2;
+//                            if (l2 + len_a2 > hap_pos[3]) hap_pos[3] = l2 + len_a2;
+//                            prev_snp_position = varlist[ss].position + len_a2;
+//                        }
+//
+//                        f2 = i; hap_pos[4] = l2;
+//                        // add variant to the list
+//                        snplst[n_variants] = ss; // no check on length of this list, not needed
+//                        calculate_rightshift(varlist, ss, reflist); // no need to do it multiple times..
+//                        if (varlist[ss].type ==0) n_snvs++;
+//                        n_variants++;
+//                    }
+//                }
+//                ss++;
+////                if (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].bnd != 1){
+////                    len_a1 = strlen(varlist[ss].allele1);
+////                    len_a2 = strlen(varlist[ss].allele2);
+////                }
+//			}
+//		}
+//
+//		if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF){
+//			l1 += ol;
+//			l2 += ol;
+//			left_on_read -= ol;
+//		}
+//		else if (op == BAM_CINS || op == BAM_CSOFT_CLIP){
+//			l1 += ol;
+//			left_on_read -= ol;
+//		}else if (op == BAM_CDEL || op == BAM_CREF_SKIP){
+//			l2 += ol;
+//		}
+//	}
+//	// might have a straggler variant left over
+//	if(n_variants > 0 && (n_snvs > 0 || PARSEINDELS)) compare_read_HAPs(read,varlist,snplst,n_variants,hap_pos,fcigarlist,fcigs,f1,f2,reflist,fragment);
+//	free(snplst);
+//
+//	return 0;
+//}
 
 //float blast_score(const char* seq1, const char* seq2) {
 //    using namespace seqan;
