@@ -987,85 +987,85 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
 ////    int result = seqan::localAlignment(ali2, scoring);
 //}
 
-float blast_score(const char* seq1, const char* seq2) {
-//    StripedSmithWaterman::Aligner aligner(1,1,1,0);
-//    auto *alignm = new StripedSmithWaterman::Alignment();
-//    auto *alignm2 = new StripedSmithWaterman::Alignment();
-//    auto *alignm3 = new StripedSmithWaterman::Alignment();
-//    auto *alignm4 = new StripedSmithWaterman::Alignment();
+//float blast_score(const char* seq1, const char* seq2) {
+////    StripedSmithWaterman::Aligner aligner(1,1,1,0);
+////    auto *alignm = new StripedSmithWaterman::Alignment();
+////    auto *alignm2 = new StripedSmithWaterman::Alignment();
+////    auto *alignm3 = new StripedSmithWaterman::Alignment();
+////    auto *alignm4 = new StripedSmithWaterman::Alignment();
+////
+////    StripedSmithWaterman::Filter filter;
+////    aligner.Align(seq1, seq2, strlen(seq2), filter, alignm, strlen(seq2)/2);
+//    EdlibAlignResult result = edlibAlign(seq1, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+//    int s1 = 2 * BLAST_REGION_LEN, s2 = 2 * BLAST_REGION_LEN, s3 = 2 * BLAST_REGION_LEN, s4 = 2 * BLAST_REGION_LEN;
+//	int align1 = 2 * BLAST_REGION_LEN, align2 = 2 * BLAST_REGION_LEN, align3 = 2 * BLAST_REGION_LEN, align4 = 2 * BLAST_REGION_LEN;
+//	if (result.status == EDLIB_STATUS_OK) {
+//		s1 = result.editDistance;
+//		align1 = result.alignmentLength;
+//	}
+//	edlibFreeAlignResult(result);
+//    auto rev = reverse_dna(seq1);
+////    aligner.Align(rev, seq2, strlen(seq2), filter, alignm2, strlen(seq2)/2);
 //
-//    StripedSmithWaterman::Filter filter;
-//    aligner.Align(seq1, seq2, strlen(seq2), filter, alignm, strlen(seq2)/2);
-    EdlibAlignResult result = edlibAlign(seq1, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
-    int s1 = 2 * BLAST_REGION_LEN, s2 = 2 * BLAST_REGION_LEN, s3 = 2 * BLAST_REGION_LEN, s4 = 2 * BLAST_REGION_LEN;
-	int align1 = 2 * BLAST_REGION_LEN, align2 = 2 * BLAST_REGION_LEN, align3 = 2 * BLAST_REGION_LEN, align4 = 2 * BLAST_REGION_LEN;
-	if (result.status == EDLIB_STATUS_OK) {
-		s1 = result.editDistance;
-		align1 = result.alignmentLength;
-	}
-	edlibFreeAlignResult(result);
-    auto rev = reverse_dna(seq1);
-//    aligner.Align(rev, seq2, strlen(seq2), filter, alignm2, strlen(seq2)/2);
-
-////    auto rev = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
-    result = edlibAlign(rev, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
-    if (result.status == EDLIB_STATUS_OK) {
-        s2 = result.editDistance;
-		align2 = result.alignmentLength;
-    }
-    edlibFreeAlignResult(result);
-    auto dna_r = complement_dna(seq1);
-//    aligner.Align(dna_r, seq2, strlen(seq2), filter, alignm3, strlen(seq2)/2);
-
-    result = edlibAlign(dna_r, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
-    if (result.status == EDLIB_STATUS_OK) {
-        s3 = result.editDistance;
-		align3 = result.alignmentLength;
-	}
-    edlibFreeAlignResult(result);
-
-    auto c_r = complement_dna(rev);
-//    aligner.Align(c_r, seq2, strlen(seq2), filter, alignm4, strlen(seq2)/2);
-
-    result = edlibAlign(c_r, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
-    if (result.status == EDLIB_STATUS_OK) {
-        s4 = result.editDistance;
-		align4 = result.alignmentLength;
-	}
-    edlibFreeAlignResult(result);
-//    auto s1 = alignm->sw_score;
-//    auto s2 = alignm2->sw_score;
-//    auto s3 = alignm3->sw_score;
-//    auto s4 = alignm4->sw_score;
-//    free(alignm);
-//    free(alignm2);
-//    free(alignm3);
-//    free(alignm4);
-
-    free(rev);
-    free(c_r);
-    free(dna_r);
-    int min = 0;
-	int minAlign = 0;
-
-	if (s1 < s2) {
-		min = s1;
-		minAlign = align1;
-	} else {
-		min = s2;
-		minAlign = align2;
-	}
-	if (min > s3) {
-		min = s3;
-		minAlign = align3;
-	}
-	if (min > s4) {
-		min = s4;
-		minAlign = align4;
-	}
-
-    return (float)(2*BLAST_REGION_LEN - min)/(float)(minAlign);
-}
+//////    auto rev = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN";
+//    result = edlibAlign(rev, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+//    if (result.status == EDLIB_STATUS_OK) {
+//        s2 = result.editDistance;
+//		align2 = result.alignmentLength;
+//    }
+//    edlibFreeAlignResult(result);
+//    auto dna_r = complement_dna(seq1);
+////    aligner.Align(dna_r, seq2, strlen(seq2), filter, alignm3, strlen(seq2)/2);
+//
+//    result = edlibAlign(dna_r, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+//    if (result.status == EDLIB_STATUS_OK) {
+//        s3 = result.editDistance;
+//		align3 = result.alignmentLength;
+//	}
+//    edlibFreeAlignResult(result);
+//
+//    auto c_r = complement_dna(rev);
+////    aligner.Align(c_r, seq2, strlen(seq2), filter, alignm4, strlen(seq2)/2);
+//
+//    result = edlibAlign(c_r, strlen(seq1), seq2, strlen(seq2), edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+//    if (result.status == EDLIB_STATUS_OK) {
+//        s4 = result.editDistance;
+//		align4 = result.alignmentLength;
+//	}
+//    edlibFreeAlignResult(result);
+////    auto s1 = alignm->sw_score;
+////    auto s2 = alignm2->sw_score;
+////    auto s3 = alignm3->sw_score;
+////    auto s4 = alignm4->sw_score;
+////    free(alignm);
+////    free(alignm2);
+////    free(alignm3);
+////    free(alignm4);
+//
+//    free(rev);
+//    free(c_r);
+//    free(dna_r);
+//    int min = 0;
+//	int minAlign = 0;
+//
+//	if (s1 < s2) {
+//		min = s1;
+//		minAlign = align1;
+//	} else {
+//		min = s2;
+//		minAlign = align2;
+//	}
+//	if (min > s3) {
+//		min = s3;
+//		minAlign = align3;
+//	}
+//	if (min > s4) {
+//		min = s4;
+//		minAlign = align4;
+//	}
+//
+//    return (float)(2*BLAST_REGION_LEN - min)/(float)(minAlign);
+//}
 char* reverse_dna(const char* s) {
     char* tmp = new char[2*BLAST_REGION_LEN];
     for (int i = 2*BLAST_REGION_LEN - 1; i >= 0; i--) {
