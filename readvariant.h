@@ -42,6 +42,7 @@ extern char* SUPPORT_READS_TAG;
 
 extern int BND_RANGE;
 extern int BLAST_REGION_LEN;
+extern int SAMPLE_IDX;
 
 extern std::map<std::string, int> SUPPORT_READS;
 

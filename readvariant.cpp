@@ -240,16 +240,17 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
     int nps_arr = 0, nps = 0, *ps = NULL;
     if (VCF_PHASED) {
         nps = bcf_get_format_int32(header, record, "PS", &ps, &nps_arr);
-        if (nps == 1) variant->phase_set = *ps;
+        if (nps == 1) variant->phase_set = *ps; else variant->phase_set = *ps;
     }
 
     ngt = bcf_get_format_int32(header, record, "GT", &gt, &ngt_arr);
-    if (ngt > 2)
-    {
-        fprintf(stdout, "\nERROR: Non-diploid VCF entry detected. Each VCF entry must have a diploid genotype (GT) field consisting of two alleles in the set {0,1,2} separated by either \'/\' or \'|\'. For example, \"1/1\", \"0/1\", and \"0|2\" are valid diploid genotypes for HapCUT2, but \"1\", \"0/3\", and \"0/0/1\" are not.\n");
-        exit(1);
-    }
-    char t = bcf_gt_allele(gt[0]);
+//    if (ngt > 2)
+//    {
+//        fprintf(stdout, "\nERROR: Non-diploid VCF entry detected. Each VCF entry must have a diploid genotype (GT) field consisting of two alleles in the set {0,1,2} separated by either \'/\' or \'|\'. For example, \"1/1\", \"0/1\", and \"0|2\" are valid diploid genotypes for HapCUT2, but \"1\", \"0/3\", and \"0/0/1\" are not.\n");
+//        exit(1);
+//    }
+//    char t = bcf_gt_allele(gt[0]);
+        char t = bcf_gt_allele(gt[2*SAMPLE_IDX]);
 //    fixme for gvcf genotype ./. t = -1
     if (t == -1) {
         variant->genotype[0] = '0';
@@ -257,9 +258,9 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
         variant->genotype[2] = '0';
         variant->genotype[3] = '\0';
     } else {
-        variant->genotype[0] = bcf_gt_allele(gt[0]) + '0';
+        variant->genotype[0] = bcf_gt_allele(gt[2*SAMPLE_IDX]) + '0';
         variant->genotype[1] = '/';
-        variant->genotype[2] = bcf_gt_allele(gt[1]) + '0';
+        variant->genotype[2] = bcf_gt_allele(gt[2*SAMPLE_IDX + 1]) + '0';
         variant->genotype[3] = '\0';
     }
     

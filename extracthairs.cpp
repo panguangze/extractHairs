@@ -54,6 +54,7 @@ int SUM_ALL_ALIGN =0; // if set to 1, use sum of all alignments scoring forr loc
 int HOMOZYGOUS = 0; // also output alleles for homozygous variants, by default such variants are ignored
 int BND_RANGE = 5;
 int BLAST_REGION_LEN = 150;
+int SAMPLE_IDX = 0;
 
 
 int* fcigarlist; // global variable
@@ -153,6 +154,7 @@ void print_options() {
 	fprintf(stderr, "--hom <0/1> : set to 1 to include homozygous variants for processing, default = 0 (only heterozygous) \n\n");
     fprintf(stderr, "--contigs <contig names> : extract for specific contigs, split with comma\n");
     fprintf(stderr, "--support_read_tag <INFO tag> : where the support reads at vcf tag\n");
+    fprintf(stderr, "--idx <vcf sample index> : where the \n");
 //    fprintf(stderr, "--support_read_tag <INFO tag> : where the support reads at vcf tag\n");
     //fprintf(stderr, "--sumall <0/1> : set to 1 to use sum of all local alignments approach (only with long reads), default = 1 \n\n");
     //fprintf(stderr,"--out : output file for haplotype informative fragments (hairs)\n\n");
@@ -525,7 +527,9 @@ int main(int argc, char** argv) {
 			SUM_ALL_ALIGN = atoi(argv[i+1]); 
 			if (SUM_ALL_ALIGN >=1) fprintf(stderr, "\nusing sum of all alignments for scoring \n");
 		}else if (strcmp(argv[i], "--ep") == 0) { 
-			ESTIMATE_PARAMS = atoi(argv[i+1]); 
+			ESTIMATE_PARAMS = atoi(argv[i+1]);
+        } else if (strcmp(argv[i], "--idx") == 0) {
+            SAMPLE_IDX = atoi(argv[i+1]);
         }else{
             fprintf(stderr, "\nERROR: Invalid Option \"%s\" specified.\n",argv[i]);
             exit(1);
