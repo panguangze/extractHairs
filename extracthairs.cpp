@@ -47,7 +47,7 @@ char* GROUPNAME; // for fragments from different pools, SRRxxx
 FILE* fragment_file;
 int TRI_ALLELIC = 0;
 int VERBOSE = 0;
-bool VCF_PHASED = false;
+bool VCF_PHASED = true;
 int PACBIO = 0; 
 int USE_SUPP_ALIGNMENTS =0; // use supplementary alignments, flag = 2048
 int SUM_ALL_ALIGN =0; // if set to 1, use sum of all alignments scoring forr local realignment 
@@ -171,6 +171,8 @@ void check_input_0_or_1(char* x){
 // need to discard reads that are marked as duplicates using flag //
 
 int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, REFLIST* reflist) {
+    std::map<int, int> *homo_recom = new std::map<int, int>();
+    homo_recom->emplace(468728,0);
     fprintf(stderr, "reading sorted bamfile %s \n", bamfile);
     int reads = 0;
     struct alignedread* read = (struct alignedread*) malloc(sizeof (struct alignedread));
@@ -299,7 +301,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 }
                 if (fragment.variants >=2) VOfragments[0]++;
 				else if (fragment.variants >=1) VOfragments[1]++;
-                if (fragment.variants >= 2 || (SINGLEREADS == 1 && fragment.variants >= 1)) print_fragment(&fragment, varlist, fragment_file);
+                if (fragment.variants >= 2 || (SINGLEREADS == 1 && fragment.variants >= 1)) print_fragment(&fragment, varlist, fragment_file, homo_recom);
             }
         } else // paired-end read
         {
@@ -361,6 +363,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     sam_itr_destroy(iter);
     bam_hdr_destroy(header);
     free(flist); free(read); free(fragment.alist);
+    free(homo_recom);
     if (REALIGN_VARIANTS) free(fcigarlist);
     return 0;
 }
