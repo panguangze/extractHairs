@@ -4,7 +4,7 @@ int MAX_BQ=93; // base quality cannot exceed this, QV=60
 
 // when --vcf-phased specified, filter fragment by phasing info
 
-int filter_by_phasing_info(FRAGMENT* fragment, VARIANT* varlist, std::map<int, int>* homo_recom){
+int filter_by_phasing_info(FRAGMENT* fragment, VARIANT* varlist){
     int len = fragment->variants;
     int phase_set_count = 0;
     //h0 > left side count //h1 > right side count // fragment score for each phase_set // side: vcf gt x/x, left 0, right 1
@@ -17,7 +17,6 @@ int filter_by_phasing_info(FRAGMENT* fragment, VARIANT* varlist, std::map<int, i
     char** phase_set_keys = (char**) malloc(sizeof(char*) * len);
     int phase_set = 0;
     VARIANT* var = NULL;
-    int side = 0;
     for (int i = 0; i < len; i++) {
         var = &varlist[fragment->alist[i].varid];
         phase_set = var->phase_set;
@@ -28,27 +27,14 @@ int filter_by_phasing_info(FRAGMENT* fragment, VARIANT* varlist, std::map<int, i
         snprintf( phase_set_str, length + 1, "%d", phase_set );
 //        specific side left or right
         int v = -1;
-//        if(var->position == )
         if (var->genotype[0] == fragment->alist[i].allele) {
-            if (homo_recom->find(fragment->alist[i].varid) != homo_recom->end()) {
-                if (side == 0) {
-                    (*homo_recom)[fragment->alist[i].varid] = (*homo_recom)[fragment->alist[i].varid]+1;
-                }
-            }
             v = getindex(&h0, phase_set_str);
             if (v == -1) insert_keyvalue(&h0, phase_set_str, length, 1);
             else update_value(&h0, phase_set_str, v+1);
-            side = 0;
         }else {
             v = getindex(&h1, phase_set_str);
             if (v == -1) insert_keyvalue(&h1, phase_set_str, length, 1);
             else update_value(&h1, phase_set_str, v+1);
-            if (homo_recom->find(fragment->alist[i].varid) != homo_recom->end()) {
-                if (side == 1) {
-                    (*homo_recom)[fragment->alist[i].varid] = (*homo_recom)[fragment->alist[i].varid]+1;
-                }
-            }
-            side = 1;
         }
         int found = 0;
         for (int k = 0; k < phase_set_count; k++) {
@@ -70,8 +56,6 @@ int filter_by_phasing_info(FRAGMENT* fragment, VARIANT* varlist, std::map<int, i
         if (p_s_k == NULL) continue;
         c_0 = getindex(&h0, p_s_k);
         c_1 = getindex(&h1, p_s_k);
-        if(c_0 == -1 || c_1 == -1)
-            return 1;
         score = c_0 / (c_1 + c_0);
         if (score >= 0.65) score_gt_65++;
         free(phase_set_keys[j]);
@@ -95,11 +79,12 @@ int compare_alleles(const void *a, const void *b) {
     else return ((allele*) a)->varid - ((allele*) b)->varid;
 }
 
-int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile,std::map<int, int>* homo_recom) {
+int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
     if (PRINT_FRAGMENTS == 0) return 0;
+
     if (VCF_PHASED) {
-        int is_print = filter_by_phasing_info(fragment, varlist, homo_recom);
-//        if (is_print == 0) return 0;
+        int is_print = filter_by_phasing_info(fragment, varlist);
+        if (is_print == 0) return 0;
     }
     int i = 0;
     /*
@@ -155,6 +140,7 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile,std::map<
 	    for (i = 0; i < fragment->variants; i++) fprintf(outfile, " %d:%c:%d",fragment->alist[i].varid+1,fragment->alist[i].allele,(char)fragment->alist[i].qv-33);
 	}
     fprintf(outfile, "\n");
+
     return 0;
 }
 
@@ -173,11 +159,8 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
         for (i = 0; i < f2->variants; i++) {
             f->alist[i+f1->variants] = f2->alist[i];
         }
-        std::map<int, int> *homo_recom = new std::map<int, int>();
-
-        int is_print = filter_by_phasing_info(f, varlist, homo_recom);
+        int is_print = filter_by_phasing_info(f, varlist);
         free(f);
-        free(homo_recom);
         if (is_print == 0) return 0;
     }
     f1->blocks = 1;
@@ -276,8 +259,6 @@ int print_mate_bnd_fragment(std::unordered_map<std::string , std::pair<int, int>
 // sort the fragment list by 'mate-position or position of 2nd read' so that reads that are from the same DNA fragment are together
 // also takes care of overlapping paired-end reads to avoid duplicates in fragments
 void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int currchrom, int currpos, int prevchrom) {
-    std::map<int, int> *homo_recom = new std::map<int, int>();
-    homo_recom->emplace(468728,0);
     int i = 0, j = 0, k = 0, first = 0, sl = 0, bl = 0;
     FRAGMENT fragment;
     fragment.variants = 0;
@@ -369,12 +350,12 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                         //for (j=0;j<flist[i].variants;j++) fprintf(stdout,"%d ",flist[i].alist[j].varid); fprintf(stdout,"| ");
                         //for (j=0;j<flist[i+1].variants;j++) fprintf(stdout,"%d ",flist[i+1].alist[j].varid);
                         //fprintf(stdout,"order of variants not correct %s \t",flist[i].id);
-                        print_fragment(&fragment, varlist, fragment_file, homo_recom);
+                        print_fragment(&fragment, varlist, fragment_file);
                         free(fragment.id);
                     }
 
                 }
-                else if (flist[i].variants+flist[i+1].variants ==2 && SINGLEREADS ==1 && flist[i].variants >= 1)print_fragment(&flist[i],varlist,fragment_file,homo_recom); // added 05/31/2017 for OPE
+                else if (flist[i].variants+flist[i+1].variants ==2 && SINGLEREADS ==1 && flist[i].variants >= 1)print_fragment(&flist[i],varlist,fragment_file); // added 05/31/2017 for OPE
 
                 //else if (flist[i].variants ==1 && flist[i+1].variants >1) print_fragment(&flist[i+1],varlist);
                 //else if (flist[i].variants > 1 && flist[i+1].variants ==1) print_fragment(&flist[i],varlist);
@@ -382,18 +363,18 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                 i += 2;
                 // what about overlapping paired-end reads.... reads..... ???? jan 13 2012,
             } else if (flist[i].variants >= 2 || (SINGLEREADS == 1 && flist[i].variants >=1)) {
-                print_fragment(&flist[i], varlist, fragment_file, homo_recom);
+                print_fragment(&flist[i], varlist, fragment_file);
                 i++;
             } else i++;
 
         }
         // last read examined if it is not paired
         if (i < *fragments) {
-            if (flist[i].variants >= 2 || (SINGLEREADS == 1 && flist[i].variants >=1)) print_fragment(&flist[i], varlist, fragment_file, homo_recom);
+            if (flist[i].variants >= 2 || (SINGLEREADS == 1 && flist[i].variants >=1)) print_fragment(&flist[i], varlist, fragment_file);
         }
     } else // only one fragment in fraglist single end
     {
-        if (flist[first].variants >= 2 || (SINGLEREADS == 1 && flist[i].variants >=1)) print_fragment(&flist[first], varlist, fragment_file, homo_recom);
+        if (flist[first].variants >= 2 || (SINGLEREADS == 1 && flist[i].variants >=1)) print_fragment(&flist[first], varlist, fragment_file);
     }
 
     // free the fragments starting from first....
@@ -406,5 +387,4 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
     }
     (*fragments) = first;
     free(fragment.alist);
-    free(homo_recom);
 }

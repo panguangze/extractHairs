@@ -35,13 +35,13 @@ typedef struct {
 } FRAGMENT;
 
 // when --vcf-phased specified, filter fragment by phasing info
-int filter_by_phasing_info(FRAGMENT* fragment, VARIANT* varlist, std::map<int, int>* homo_recom);
+int filter_by_phasing_info(FRAGMENT* fragment, VARIANT* varlist);
 
 int compare_fragments(const void *a, const void *b);
 
 int compare_alleles(const void *a, const void *b);
 
-int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile, std::map<int, int>* homo_recom);
+int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile);
 
 // make sure they are in the correct order, i+1 could be < i
 int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile);

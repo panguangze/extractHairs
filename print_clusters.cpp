@@ -182,14 +182,11 @@ int generate_single_fragment(struct alignedread** readlist, int s, int e, int le
 
     fp.variants = j;
     if (j >= 2) {
-        std::map<int, int> *homo_recom = new std::map<int, int>();
-        homo_recom->emplace(468728,0);
         fprintf(stdout, "FRAGMENT ");
-        print_fragment(&fp, varlist, stdout, homo_recom);
+        print_fragment(&fp, varlist, stdout);
         //fprintf(stderr,"fragfile %s \n",fragment_file);
         //if (fragment_file != stdout)
-        print_fragment(&fp, varlist, fragment_file, homo_recom);
-        free(homo_recom);
+        print_fragment(&fp, varlist, fragment_file);
     }
     free(fp.alist);
     free(fp.id);
