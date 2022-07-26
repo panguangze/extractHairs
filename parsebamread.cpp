@@ -344,12 +344,12 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
             }
             l2 += ol;
         } else if (op == BAM_CREF_SKIP) l2 += ol;
-        else if (SUPPORT_READS_TAG == nullptr && op == BAM_CSOFT_CLIP) // primary alignment
+        else if ( op == BAM_CSOFT_CLIP) // primary alignment
         {
             support_ref_bnd_reads = false;
 
             //fixme sv position is not a precise location, a range +-5
-            if (PARSEBND)
+            if (PARSEBND && SUPPORT_READS_TAG == nullptr)
             {
                 if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + BND_RANGE + 1 && varlist[ss].position >= start + l2 - BND_RANGE - 1) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last && ol >= 10 )
                 {
@@ -362,14 +362,26 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
                     else varlist[ss].A2 += 1;
                     ss++; 
                 }
+            } else {
+                if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
+                {
+                    fragment->alist[fragment->variants].varid = ss;
+                    fragment->alist[fragment->variants].allele = '1';
+                    fragment->alist[fragment->variants].qv = read->quality[l1];
+                    fragment->variants++;
+                    varlist[ss].depth++;
+                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+                    else varlist[ss].A2 += 1;
+                    ss++;
+                }
             }
             l1 += ol;
         }
-        else if (SUPPORT_READS_TAG == nullptr && op == BAM_CHARD_CLIP) // secondary alignment ,notice that this is quite uncommon for reads with leght less than 150bp
+        else if (op == BAM_CHARD_CLIP) // secondary alignment ,notice that this is quite uncommon for reads with leght less than 150bp
         {
             support_ref_bnd_reads = false;
 
-            if (PARSEBND)
+            if (PARSEBND && SUPPORT_READS_TAG == nullptr)
             {
                 if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + BND_RANGE + 1 && varlist[ss].position >= start + l2 - BND_RANGE - 1) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last && ol >= 10 )
                 {
@@ -381,6 +393,18 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
                     if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
                     else varlist[ss].A2 += 1;
                     ss++; 
+                }
+            } else {
+                if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
+                {
+                    fragment->alist[fragment->variants].varid = ss;
+                    fragment->alist[fragment->variants].allele = '1';
+                    fragment->alist[fragment->variants].qv = read->quality[l1];
+                    fragment->variants++;
+                    varlist[ss].depth++;
+                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+                    else varlist[ss].A2 += 1;
+                    ss++;
                 }
             }
             l2 += 0;
