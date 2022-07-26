@@ -24,4 +24,4 @@ set(LIBHTS libhts.a)
 
 add_executable(ExtractHAIRs ${EXTRACT_SRC} ssw.h ssw.c ssw_cpp.h ssw_cpp.cpp)
 
-target_link_libraries(ExtractHAIRs -lhts z -ledlib)
+target_link_libraries(ExtractHAIRs -lhts z)
