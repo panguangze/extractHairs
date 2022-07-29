@@ -240,6 +240,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 //            continue;
 //        }
         // find the chromosome in reflist that matches read->chrom if the previous chromosome is different from current chromosome
+        if (read->mquality < MIN_MQ) continue;
         if (read->tid != prevtid) {
         chrom = getindex(ht,read->chrom);  // this will return -1 if the contig name is not  in the VCF file 
 	    if (chrom < 0) fprintf(stderr,"chrom \"%s\" not in VCF file, skipping all reads for this chrom.... \n",read->chrom);
@@ -263,10 +264,11 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
             }
         } else chrom = prevchrom;
         //if (chrom_missing_index ==1) { prevtid = read->tid; free_readmemory(read); continue; } 
-
+        if(strcmp("HISEQ1:93:H2YHMBCXX:1:2209:9683:34577", read->readid) == 0) {
+            int mm = 9;
+        }
 
         fragment.absIS = (read->IS < 0) ? -1 * read->IS : read->IS;
-
         // add check to see if the mate and its read are on same chromosome, bug for contigs, july 16 2012
         if ((read->flag & 8) || fragment.absIS > MAX_IS || fragment.absIS < MIN_IS || read->IS == 0 || !(read->flag & 1) || read->tid != read->mtid) // single read
         {
