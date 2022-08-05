@@ -395,15 +395,15 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
 void sort_framgment(FRAGMENT* fragment) {
     int i,j;
     int n = fragment->variants;
-    allele * t;
+    allele t;
     for (i = 0; i < n; i++) {
 
         for (j = i + 1; j < n; j++) {
 
             if ((fragment->alist+ j)->varid < (fragment->alist+ i)->varid) {
-                t = fragment->alist+ i;
+                t = *(fragment->alist+ i);
                 *(fragment->alist + i) = *(fragment->alist + j);
-                *(fragment->alist + j) = *t;
+                *(fragment->alist + j) = t;
             }
         }
     }

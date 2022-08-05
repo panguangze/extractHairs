@@ -409,6 +409,8 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                 variant->heterozygous = '1'; // variant will be used for outputting hairs
                 //fprintf(stdout,"variant %s %s %s %c\n",variant->allele1,variant->allele2,variant->genotype,variant->heterozygous);
                 return 1;
+            } else if (variant->genotype[0] == variant->genotype[2]) {
+                variant->heterozygous = '4';
             }
             else {
                 variant->heterozygous = '0';
