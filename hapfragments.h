@@ -6,6 +6,8 @@
 #include<time.h>
 #include<math.h>
 #include<string.h>
+#include <array>
+#include <algorithm>
 #include "readvariant.h"
 
 extern int SINGLEREADS;
@@ -50,4 +52,5 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile);
 int print_mate_bnd_fragment(std::unordered_map<std::string , std::pair<int, int>>& BNDs, FILE* outfile);
 void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int currchrom, int currpos, int prevchrom);
 
+void sort_framgment(FRAGMENT* fragment);
 #endif

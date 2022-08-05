@@ -87,6 +87,7 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
         if (is_print == 0) return 0;
     }
     int i = 0;
+    sort_framgment(fragment);
     /*
        fprintf(stdout,"HAIR %s %d \t",fragment->id,fragment->variants);
        j = fragment->alist[i].varid;
@@ -147,6 +148,8 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
 // make sure they are in the correct order, i+1 could be < i
 
 int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) {
+    sort_framgment(f1);
+    sort_framgment(f2);
     if (PRINT_FRAGMENTS == 0) return 0;
     int i = 0;
     if (VCF_PHASED) {
@@ -387,4 +390,21 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
     }
     (*fragments) = first;
     free(fragment.alist);
+}
+
+void sort_framgment(FRAGMENT* fragment) {
+    int i,j;
+    int n = fragment->variants;
+    allele * t;
+    for (i = 0; i < n; i++) {
+
+        for (j = i + 1; j < n; j++) {
+
+            if ((fragment->alist+ j)->varid < (fragment->alist+ i)->varid) {
+                t = fragment->alist+ i;
+                *(fragment->alist + i) = *(fragment->alist + j);
+                *(fragment->alist + j) = *t;
+            }
+        }
+    }
 }
