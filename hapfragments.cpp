@@ -167,7 +167,7 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
 //    if (VCF_PHASED) {
         FRAGMENT* f = (FRAGMENT*)malloc(sizeof(FRAGMENT));
         f->id = "test_MP";
-        f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size));
+        f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size + 1));
         f->variants = f1->variants + f2_size;
         for (i = 0; i < f1->variants; i++) {
             f->alist[i] = f1->alist[i];
