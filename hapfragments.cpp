@@ -166,12 +166,16 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
     }
 //    if (VCF_PHASED) {
         FRAGMENT* f = (FRAGMENT*)malloc(sizeof(FRAGMENT));
-        f->id = "test_MP";
+        f->id = f1->id;
+        if (strcmp(f1->id, "D00360:94:H2YT5BCXX:1:2213:5441:80121") == 0) {
+            int tmp = 33;
+        }
         f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size + 1));
         f->variants = f1->variants + f2_size;
         for (i = 0; i < f1->variants; i++) {
             f->alist[i] = f1->alist[i];
         }
+        int pos = 0 ;
         for (i = 0; i < f2->variants; i++) {
             bool ee = false;
             for (j = 0; j < f1->variants; j++) {
@@ -180,8 +184,10 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
                     break;
                 }
             }
-            if (!ee)
-                f->alist[i+f1->variants] = f2->alist[i];
+            if (!ee) {
+                f->alist[pos+f1->variants] = f2->alist[i];
+                pos++;
+            }
         }
     print_fragment(f, varlist,outfile);
     free(f);

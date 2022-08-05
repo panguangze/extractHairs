@@ -252,6 +252,9 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
 //    char t = bcf_gt_allele(gt[0]);
         char t = bcf_gt_allele(gt[2*SAMPLE_IDX]);
 //    fixme for gvcf genotype ./. t = -1
+    if (record->pos == 235101463) {
+        int tmp = 33;
+    }
     if (t == -1) {
         variant->genotype[0] = '0';
         variant->genotype[1] = '/';
@@ -358,7 +361,21 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
         }
         // reduce the length of the two alleles for VCF format outputted by samtoools, april 17 2012
         // basically CAAAA -> CAA  can be reduced to CA -> C
-        
+
+
+        if (variant->type != 0 || variant->bnd == 1)      // if indel or bnd, consider 0/1 only
+        {
+            if ((variant->genotype[0] == '0' && variant->genotype[2] == '1') || (variant->genotype[0] == '1' && variant->genotype[2] == '0')) {
+                //if (flag >0) fprintf(stderr,"%s %d %s %s \n",variant->chrom,variant->position,variant->allele1,variant->allele2);
+                variant->heterozygous = '1'; // variant will be used for outputting hairs
+                //fprintf(stdout,"variant %s %s %s %c\n",variant->allele1,variant->allele2,variant->genotype,variant->heterozygous);
+                return 1;
+            }
+            else {
+                variant->heterozygous = '0';
+                return 0;
+            }
+        }
         if (variant->bnd == 0)
         {
             i = strlen(variant->allele1) - 1;
@@ -393,29 +410,19 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
 //            }
             std::string tmp_reads = support_reads;
             std::stringstream ss(support_reads);
-            while( ss.good() )
-            {
-                std::string substr;
-                getline( ss, substr, ',' );
-                SUPPORT_READS.emplace(substr, variant_ss);
+            if (variant->heterozygous !='1') {
+                while( ss.good() )
+                {
+                    std::string substr;
+                    getline( ss, substr, ',' );
+                    SUPPORT_READS.emplace(substr, variant_ss);
+                }
             }
             parse_bnd(variant, chromosome);
         }
         
-        if (variant->type != 0 || variant->bnd == 1)      // if indel or bnd, consider 0/1 only
-        {
-            if ((variant->genotype[0] == '0' && variant->genotype[2] == '1') || (variant->genotype[0] == '1' && variant->genotype[2] == '0')) {
-                //if (flag >0) fprintf(stderr,"%s %d %s %s \n",variant->chrom,variant->position,variant->allele1,variant->allele2);
-                variant->heterozygous = '1'; // variant will be used for outputting hairs
-                //fprintf(stdout,"variant %s %s %s %c\n",variant->allele1,variant->allele2,variant->genotype,variant->heterozygous);
-                return 1;
-            }
-            else {
-                variant->heterozygous = '0';
-                return 0;
-            }
-        }
-        
+
+
         // snp only here 
         if ((variant->genotype[0] == '0' && variant->genotype[2] == '1') || (variant->genotype[0] == '1' && variant->genotype[2] == '0')) {
             //if (flag >0) fprintf(stderr,"%s %d %s %s \n",variant->chrom,variant->position,variant->allele1,variant->allele2);
