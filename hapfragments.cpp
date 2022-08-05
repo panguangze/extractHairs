@@ -148,12 +148,13 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
 // make sure they are in the correct order, i+1 could be < i
 
 int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) {
-    sort_framgment(f1);
-    sort_framgment(f2);
+//    sort_framgment(f1);
+//    sort_framgment(f2);
     if (PRINT_FRAGMENTS == 0) return 0;
     int i = 0;
-    if (VCF_PHASED) {
+//    if (VCF_PHASED) {
         FRAGMENT* f = (FRAGMENT*)malloc(sizeof(FRAGMENT));
+        f->id = "test_MP";
         f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2->variants));
         f->variants = f1->variants + f2->variants;
         for (i = 0; i < f1->variants; i++) {
@@ -162,59 +163,60 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
         for (i = 0; i < f2->variants; i++) {
             f->alist[i+f1->variants] = f2->alist[i];
         }
-        int is_print = filter_by_phasing_info(f, varlist);
-        free(f);
-        if (is_print == 0) return 0;
-    }
-    f1->blocks = 1;
-    for (i = 0; i < f1->variants - 1; i++) {
-        if (f1->alist[i + 1].varid - f1->alist[i].varid != 1) f1->blocks++;
-    }
-    if (f2->alist[0].varid - f1->alist[f1->variants - 1].varid != 1) f1->blocks++;
-    for (i = 0; i < f2->variants - 1; i++) {
-        if (f2->alist[i + 1].varid - f2->alist[i].varid != 1) f1->blocks++;
-    }
-
-    fprintf(outfile, "%d %s_MP", f1->blocks, f1->id);
-    //fprintf(outfile,"%d %s_%s_MP",f1->blocks,varlist[f1->alist[0].varid].chrom,f1->id);
-    //	for (i=0;i<f1->variants;i++) fprintf(outfile,"%c",f1->alist[i].qv);
-    //	for (i=0;i<f2->variants;i++) fprintf(outfile,"%c",f2->alist[i].qv);
-
-    //new format prints col 3 as data type (0 for normal, 1 for HiC) and col 4 as mate 2 index
-    if (DATA_TYPE == 2){
-        if(f1->barcode != NULL)
-            fprintf(outfile, " 2 %s -1", f1->barcode);
-        else
-            fprintf(outfile, " 2 NULL -1");
-    }
-    else if (NEW_FORMAT)
-        fprintf(outfile, " %d %d %d", DATA_TYPE, f2->alist[0].varid+1, f1->absIS);
-
-    // varid is printed with offset of 1 rather than 0 since that is encoded in the Hapcut program
-    fprintf(outfile, " %d %c", f1->alist[0].varid + 1, f1->alist[0].allele);
-
-    for (i = 1; i < f1->variants; i++) {
-        if (f1->alist[i].varid - f1->alist[i - 1].varid == 1) fprintf(outfile, "%c", f1->alist[i].allele);
-        else fprintf(outfile, " %d %c", f1->alist[i].varid + 1, f1->alist[i].allele);
-    }
-    if (f2->alist[0].varid - f1->alist[f1->variants - 1].varid == 1) fprintf(outfile, "%c", f2->alist[0].allele);
-    else fprintf(outfile, " %d %c", f2->alist[0].varid + 1, f2->alist[0].allele);
-    for (i = 1; i < f2->variants; i++) {
-        if (f2->alist[i].varid - f2->alist[i - 1].varid == 1) fprintf(outfile, "%c", f2->alist[i].allele);
-        else fprintf(outfile, " %d %c", f2->alist[i].varid + 1, f2->alist[i].allele);
-    }
-    fprintf(outfile, " ");
-    for (i = 0; i < f1->variants; i++) fprintf(outfile, "%c", f1->alist[i].qv);
-    for (i = 0; i < f2->variants; i++) fprintf(outfile, "%c", f2->alist[i].qv);
-	fprintf(outfile, " ");
-	fprintf(outfile, "%d", f1->read_qual);
-    if (DATA_TYPE == 2)
-    {
-        if (f1->rescued != 0 && f1->rescued != 1)
-            f1->rescued = 0;
-        fprintf(outfile, " %d %f", f1->rescued, f1->dm);
-    }
-    fprintf(outfile, "\n");
+    print_fragment(f, varlist,outfile);
+    free(f);
+//        int is_print = filter_by_phasing_info(f, varlist);
+//        free(f);
+//        if (is_print == 0) return 0;
+//    }
+//    f1->blocks = 1;
+//    for (i = 0; i < f1->variants - 1; i++) {
+//        if (f1->alist[i + 1].varid - f1->alist[i].varid != 1) f1->blocks++;
+//    }
+//    if (f2->alist[0].varid - f1->alist[f1->variants - 1].varid != 1) f1->blocks++;
+//    for (i = 0; i < f2->variants - 1; i++) {
+//        if (f2->alist[i + 1].varid - f2->alist[i].varid != 1) f1->blocks++;
+//    }
+//
+//    fprintf(outfile, "%d %s_MP", f1->blocks, f1->id);
+//    //fprintf(outfile,"%d %s_%s_MP",f1->blocks,varlist[f1->alist[0].varid].chrom,f1->id);
+//    //	for (i=0;i<f1->variants;i++) fprintf(outfile,"%c",f1->alist[i].qv);
+//    //	for (i=0;i<f2->variants;i++) fprintf(outfile,"%c",f2->alist[i].qv);
+//
+//    //new format prints col 3 as data type (0 for normal, 1 for HiC) and col 4 as mate 2 index
+//    if (DATA_TYPE == 2){
+//        if(f1->barcode != NULL)
+//            fprintf(outfile, " 2 %s -1", f1->barcode);
+//        else
+//            fprintf(outfile, " 2 NULL -1");
+//    }
+//    else if (NEW_FORMAT)
+//        fprintf(outfile, " %d %d %d", DATA_TYPE, f2->alist[0].varid+1, f1->absIS);
+////    std::vector<int> f1_pos;
+//    // varid is printed with offset of 1 rather than 0 since that is encoded in the Hapcut program
+//    fprintf(outfile, " %d %c", f1->alist[0].varid + 1, f1->alist[0].allele);
+//    for (i = 1; i < f1->variants; i++) {
+//        if (f1->alist[i].varid - f1->alist[i - 1].varid == 1) fprintf(outfile, "%c", f1->alist[i].allele);
+//        else fprintf(outfile, " %d %c", f1->alist[i].varid + 1, f1->alist[i].allele);
+//    }
+//    if (f2->alist[0].varid - f1->alist[f1->variants - 1].varid == 1) fprintf(outfile, "%c", f2->alist[0].allele);
+//    else fprintf(outfile, " %d %c", f2->alist[0].varid + 1, f2->alist[0].allele);
+//    for (i = 1; i < f2->variants; i++) {
+//        if (f2->alist[i].varid - f2->alist[i - 1].varid == 1) fprintf(outfile, "%c", f2->alist[i].allele);
+//        else fprintf(outfile, " %d %c", f2->alist[i].varid + 1, f2->alist[i].allele);
+//    }
+//    fprintf(outfile, " ");
+//    for (i = 0; i < f1->variants; i++) fprintf(outfile, "%c", f1->alist[i].qv);
+//    for (i = 0; i < f2->variants; i++) fprintf(outfile, "%c", f2->alist[i].qv);
+//	fprintf(outfile, " ");
+//	fprintf(outfile, "%d", f1->read_qual);
+//    if (DATA_TYPE == 2)
+//    {
+//        if (f1->rescued != 0 && f1->rescued != 1)
+//            f1->rescued = 0;
+//        fprintf(outfile, " %d %f", f1->rescued, f1->dm);
+//    }
+//    fprintf(outfile, "\n");
 
     //	fprintf(outfile," type:");
     //	for (i=0;i<f1->variants;i++) fprintf(outfile,"%d:%d,",varlist[f1->alist[i].varid].type,varlist[f1->alist[i].varid].position);

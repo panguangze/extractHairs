@@ -9,7 +9,7 @@
 #include <array>
 #include <algorithm>
 #include "readvariant.h"
-
+#include "vector"
 extern int SINGLEREADS;
 extern int DATA_TYPE;
 extern int NEW_FORMAT;
