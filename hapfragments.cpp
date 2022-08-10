@@ -166,8 +166,11 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
     }
 //    if (VCF_PHASED) {
         FRAGMENT* f = (FRAGMENT*)malloc(sizeof(FRAGMENT));
-        f->id = f1->id;
-        if (strcmp(f1->id, "D00360:94:H2YT5BCXX:1:2213:5441:80121") == 0) {
+        f->id = (char*) malloc(strlen(f1->id) + 4);
+        strcpy(f->id, f1->id);
+        strcpy(f->id,"_MP");
+        f->read_qual = (f1->read_qual + f2->read_qual) / 2;
+        if (strcmp(f1->id, "D00360:94:H2YT5BCXX:1:2201:7921:46278") == 0) {
             int tmp = 33;
         }
         f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size + 1));
