@@ -240,7 +240,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 //            continue;
 //        }
         // find the chromosome in reflist that matches read->chrom if the previous chromosome is different from current chromosome
-        if (read->mquality < MIN_MQ) continue;
+        if (read->mquality < MIN_MQ && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) continue;
         if (read->tid != prevtid) {
         chrom = getindex(ht,read->chrom);  // this will return -1 if the contig name is not  in the VCF file 
 	    if (chrom < 0) fprintf(stderr,"chrom \"%s\" not in VCF file, skipping all reads for this chrom.... \n",read->chrom);

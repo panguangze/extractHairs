@@ -217,7 +217,7 @@ int realignment_params(char* bamfile,REFLIST* reflist,char* regions,Align_Params
 	        else ret = sam_itr_next(fp,iter,b);  // specific region
 		if (ret < 0) break;
 	    fetch_func(b, fp, hdr, read);
-        if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | 2048)) || read->mquality < MIN_MQ) 
+        if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP | 2048)) || (read->mquality < MIN_MQ && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()))
 		{
 	    	free_readmemory(read);  	    
 			continue;
