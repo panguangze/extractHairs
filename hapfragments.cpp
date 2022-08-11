@@ -80,6 +80,9 @@ int compare_alleles(const void *a, const void *b) {
 }
 
 int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
+    if (strcmp(fragment->id, "D00360:96:H2YLYBCXX:2:2107:6275:2376") == 0) {
+        int tmp = 33;
+    }
     if (PRINT_FRAGMENTS == 0) return 0;
 
     if (VCF_PHASED) {
@@ -170,7 +173,7 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
         strcpy(f->id, f1->id);
         strcat(f->id,"_MP");
         f->read_qual = (f1->read_qual + f2->read_qual) / 2;
-        if (strcmp(f1->id, "D00360:94:H2YT5BCXX:1:1109:5815:14301") == 0) {
+        if (strcmp(f1->id, "D00360:96:H2YLYBCXX:2:2107:6275:2376") == 0) {
             int tmp = 33;
         }
         f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size + 1));
@@ -316,7 +319,7 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
             if (strcmp(flist[i].id, flist[i + 1].id) == 0) // mate pair with both ends having at least one variant
             {
                 //fprintf(stdout,"mate-pair %s %s %s\n",flist[i].id);
-                if (flist[i].alist[flist[i].variants - 1].varid < flist[i + 1].alist[0].varid) print_matepair(&flist[i], &flist[i + 1], varlist, fragment_file);
+                if (flist[i].alist[flist[i].variants - 1].varid <= flist[i + 1].alist[0].varid) print_matepair(&flist[i], &flist[i + 1], varlist, fragment_file);
                 else if (flist[i + 1].alist[flist[i + 1].variants - 1].varid < flist[i].alist[0].varid) print_matepair(&flist[i + 1], &flist[i], varlist, fragment_file);
                 else if (flist[i].variants + flist[i + 1].variants >= 2) {
                     j = 0;

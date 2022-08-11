@@ -348,30 +348,30 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         {
             support_ref_bnd_reads = false;
 
-            //fixme sv position is not a precise location, a range +-5
+            //fixme sv position is not a precise location, a range +-5,not used , reads provided
             if (PARSEBND && SUPPORT_READS_TAG == nullptr)
             {
                 if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + BND_RANGE + 1 && varlist[ss].position >= start + l2 - BND_RANGE - 1) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last && ol >= 10 )
                 {
-                    fragment->alist[fragment->variants].varid = ss;
-                    fragment->alist[fragment->variants].allele = '1';
-                    fragment->alist[fragment->variants].qv = read->quality[l1];
-                    fragment->variants++;
-                    varlist[ss].depth++;
-                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
-                    else varlist[ss].A2 += 1;
-                    ss++; 
+//                    fragment->alist[fragment->variants].varid = ss;
+//                    fragment->alist[fragment->variants].allele = '1';
+//                    fragment->alist[fragment->variants].qv = read->quality[l1];
+//                    fragment->variants++;
+//                    varlist[ss].depth++;
+//                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+//                    else varlist[ss].A2 += 1;
+                    ss++;
                 }
             } else {
                 if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
                 {
-                    fragment->alist[fragment->variants].varid = ss;
-                    fragment->alist[fragment->variants].allele = '1';
-                    fragment->alist[fragment->variants].qv = read->quality[l1];
-                    fragment->variants++;
-                    varlist[ss].depth++;
-                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
-                    else varlist[ss].A2 += 1;
+//                    fragment->alist[fragment->variants].varid = ss;
+//                    fragment->alist[fragment->variants].allele = '1';
+//                    fragment->alist[fragment->variants].qv = read->quality[l1];
+//                    fragment->variants++;
+//                    varlist[ss].depth++;
+//                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+//                    else varlist[ss].A2 += 1;
                     ss++;
                 }
             }
@@ -385,25 +385,25 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
             {
                 if (varlist[ss].heterozygous == '1' && (varlist[ss].position <= start + l2 + BND_RANGE + 1 && varlist[ss].position >= start + l2 - BND_RANGE - 1) && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last && ol >= 10 )
                 {
-                    fragment->alist[fragment->variants].varid = ss;
-                    fragment->alist[fragment->variants].allele = '1';
-                    fragment->alist[fragment->variants].qv = read->quality[l1];
-                    fragment->variants++;
-                    varlist[ss].depth++;
-                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
-                    else varlist[ss].A2 += 1;
+//                    fragment->alist[fragment->variants].varid = ss;
+//                    fragment->alist[fragment->variants].allele = '1';
+//                    fragment->alist[fragment->variants].qv = read->quality[l1];
+//                    fragment->variants++;
+//                    varlist[ss].depth++;
+//                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+//                    else varlist[ss].A2 += 1;
                     ss++; 
                 }
             } else {
                 if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
                 {
-                    fragment->alist[fragment->variants].varid = ss;
-                    fragment->alist[fragment->variants].allele = '1';
-                    fragment->alist[fragment->variants].qv = read->quality[l1];
-                    fragment->variants++;
-                    varlist[ss].depth++;
-                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
-                    else varlist[ss].A2 += 1;
+//                    fragment->alist[fragment->variants].varid = ss;
+//                    fragment->alist[fragment->variants].allele = '1';
+//                    fragment->alist[fragment->variants].qv = read->quality[l1];
+//                    fragment->variants++;
+//                    varlist[ss].depth++;
+//                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
+//                    else varlist[ss].A2 += 1;
                     ss++;
                 }
             }

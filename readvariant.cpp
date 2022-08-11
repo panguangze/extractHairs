@@ -385,7 +385,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
 //            }
                     std::string tmp_reads = support_reads;
                     std::stringstream ss(support_reads);
-                    if (variant->heterozygous !='1') {
+                    if (variant->heterozygous =='1') {
                         while( ss.good() )
                         {
                             std::string substr;
