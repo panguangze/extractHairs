@@ -252,7 +252,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
 //    char t = bcf_gt_allele(gt[0]);
         char t = bcf_gt_allele(gt[2*SAMPLE_IDX]);
 //    fixme for gvcf genotype ./. t = -1
-    if (record->pos == 235101463) {
+    if (record->pos == 102808982) {
         int tmp = 33;
     }
     if (t == -1) {
@@ -369,6 +369,32 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                 //if (flag >0) fprintf(stderr,"%s %d %s %s \n",variant->chrom,variant->position,variant->allele1,variant->allele2);
                 variant->heterozygous = '1'; // variant will be used for outputting hairs
                 //fprintf(stdout,"variant %s %s %s %c\n",variant->allele1,variant->allele2,variant->genotype,variant->heterozygous);
+                if (variant->bnd == 1) {
+                    char *support_reads = NULL;
+                    int support_reads_info_arr = 0;
+                    int sninfo = 0;
+                    sninfo = bcf_get_info_string(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
+//            if (ninfo != 0)
+//                variant->bnd_sv_len = *sv_len;
+//            if (strcmp(variant->AA, "<INS>") == 0) {
+//                char * insSeq = nullptr;
+//                int info_arr= 0;
+//                ninfo = bcf_get_info_string(header, record, "INS_SEQ", &insSeq, &sv_len_info_arr);
+//                if (ninfo != 0)
+//                    variant->bnd_ins_seq = insSeq;
+//            }
+                    std::string tmp_reads = support_reads;
+                    std::stringstream ss(support_reads);
+                    if (variant->heterozygous !='1') {
+                        while( ss.good() )
+                        {
+                            std::string substr;
+                            getline( ss, substr, ',' );
+                            SUPPORT_READS.emplace(substr, variant_ss);
+                        }
+                    }
+                    parse_bnd(variant, chromosome);
+                }
                 return 1;
             }
             else {
@@ -394,32 +420,32 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
             if (variant->type != 0)
                 variant->position++; // add one to position for indels
         }
-        else {
-            char *support_reads = NULL;
-            int support_reads_info_arr = 0;
-            int sninfo = 0;
-            sninfo = bcf_get_info_string(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
-//            if (ninfo != 0)
-//                variant->bnd_sv_len = *sv_len;
-//            if (strcmp(variant->AA, "<INS>") == 0) {
-//                char * insSeq = nullptr;
-//                int info_arr= 0;
-//                ninfo = bcf_get_info_string(header, record, "INS_SEQ", &insSeq, &sv_len_info_arr);
-//                if (ninfo != 0)
-//                    variant->bnd_ins_seq = insSeq;
+//        else {
+//            char *support_reads = NULL;
+//            int support_reads_info_arr = 0;
+//            int sninfo = 0;
+//            sninfo = bcf_get_info_string(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
+////            if (ninfo != 0)
+////                variant->bnd_sv_len = *sv_len;
+////            if (strcmp(variant->AA, "<INS>") == 0) {
+////                char * insSeq = nullptr;
+////                int info_arr= 0;
+////                ninfo = bcf_get_info_string(header, record, "INS_SEQ", &insSeq, &sv_len_info_arr);
+////                if (ninfo != 0)
+////                    variant->bnd_ins_seq = insSeq;
+////            }
+//            std::string tmp_reads = support_reads;
+//            std::stringstream ss(support_reads);
+//            if (variant->heterozygous !='1') {
+//                while( ss.good() )
+//                {
+//                    std::string substr;
+//                    getline( ss, substr, ',' );
+//                    SUPPORT_READS.emplace(substr, variant_ss);
+//                }
 //            }
-            std::string tmp_reads = support_reads;
-            std::stringstream ss(support_reads);
-            if (variant->heterozygous !='1') {
-                while( ss.good() )
-                {
-                    std::string substr;
-                    getline( ss, substr, ',' );
-                    SUPPORT_READS.emplace(substr, variant_ss);
-                }
-            }
-            parse_bnd(variant, chromosome);
-        }
+//            parse_bnd(variant, chromosome);
+//        }
         
 
 

@@ -170,7 +170,7 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
         strcpy(f->id, f1->id);
         strcat(f->id,"_MP");
         f->read_qual = (f1->read_qual + f2->read_qual) / 2;
-        if (strcmp(f1->id, "D00360:94:H2YT5BCXX:1:2201:7921:46278") == 0) {
+        if (strcmp(f1->id, "D00360:94:H2YT5BCXX:1:1109:5815:14301") == 0) {
             int tmp = 33;
         }
         f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size + 1));
