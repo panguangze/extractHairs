@@ -80,7 +80,7 @@ int compare_alleles(const void *a, const void *b) {
 }
 
 int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
-    if (strcmp(fragment->id, "D00360:96:H2YLYBCXX:2:2107:6275:2376") == 0) {
+    if (strcmp(fragment->id, "D00360:95:H2YWMBCXX:2:2214:11806:83148") == 0) {
         int tmp = 33;
     }
     if (PRINT_FRAGMENTS == 0) return 0;
@@ -173,7 +173,7 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
         strcpy(f->id, f1->id);
         strcat(f->id,"_MP");
         f->read_qual = (f1->read_qual + f2->read_qual) / 2;
-        if (strcmp(f1->id, "D00360:96:H2YLYBCXX:2:2107:6275:2376") == 0) {
+        if (strcmp(f1->id, "D00360:94:H2YT5BCXX:1:1109:5815:14301") == 0) {
             int tmp = 33;
         }
         f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size + 1));

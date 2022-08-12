@@ -264,13 +264,13 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
             }
         } else chrom = prevchrom;
         //if (chrom_missing_index ==1) { prevtid = read->tid; free_readmemory(read); continue; } 
-        if(strcmp("D00360:96:H2YLYBCXX:2:2107:6275:2376", read->readid) == 0) {
+        if(strcmp("D00360:95:H2YWMBCXX:2:2214:11806:83148", read->readid) == 0) {
             int mm = 9;
         }
 
         fragment.absIS = (read->IS < 0) ? -1 * read->IS : read->IS;
         // add check to see if the mate and its read are on same chromosome, bug for contigs, july 16 2012
-        if (((read->flag & 8) || fragment.absIS > MAX_IS || fragment.absIS < MIN_IS || read->IS == 0 || !(read->flag & 1) || read->tid != read->mtid) && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) // single read
+        if (((read->flag & 8) || fragment.absIS > MAX_IS || fragment.absIS < MIN_IS || read->IS == 0 || !(read->flag & 1) || read->tid != read->mtid)) // single read
         {
             fragment.variants = 0; // v1 =0; v2=0;
             if ( (read->flag & 16) ==16) fragment.strand = '-'; else fragment.strand = '+';
