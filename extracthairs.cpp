@@ -286,7 +286,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                     auto pos = SUPPORT_READS[std::string(read->readid)];
                     fragment.alist[fragment.variants].varid = pos;
                     fragment.alist[fragment.variants].allele = '1';
-                    fragment.alist[fragment.variants].qv = 60;
+                    fragment.alist[fragment.variants].qv = QVoffset + 10;
                     fragment.variants++;
                     varlist[pos].depth++;
                     if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
@@ -315,7 +315,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 auto pos = SUPPORT_READS[std::string(read->readid)];
                 fragment.alist[fragment.variants].varid = pos;
                 fragment.alist[fragment.variants].allele = '1';
-                fragment.alist[fragment.variants].qv = 60;
+                fragment.alist[fragment.variants].qv = QVoffset + 10;
                 fragment.variants++;
                 varlist[pos].depth++;
                 if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
