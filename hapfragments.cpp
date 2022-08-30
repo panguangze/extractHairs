@@ -80,6 +80,7 @@ int compare_alleles(const void *a, const void *b) {
 }
 
 int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
+    if (fragment->variants < 2) return 0;
     if (strcmp(fragment->id, "D00360:95:H2YWMBCXX:2:2214:11806:83148") == 0) {
         int tmp = 33;
     }
