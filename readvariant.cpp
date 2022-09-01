@@ -374,8 +374,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                     int support_reads_info_arr = 0;
                     int sninfo = 0;
                     sninfo = bcf_get_format_string(header, record, SUPPORT_READS_TAG,&support_reads, &support_reads_info_arr);
-                    auto idx_support_reads = *(support_reads+SAMPLE_IDX);
-                    int tmpp = 3;
+                    std::string idx_support_reads = *(support_reads+SAMPLE_IDX);
 //                    sninfo = bcf_get_info_string(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
 //            if (ninfo != 0)
 //                variant->bnd_sv_len = *sv_len;
@@ -406,6 +405,10 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                         }
                     }
                     parse_bnd(variant, chromosome);
+                    free(support_reads);
+//                    free(support_reads_info_arr);
+//                    free(idx_support_reads);
+                    /*free(support_reads_info_arr)*//*;*/
                 }
                 return 1;
             }
