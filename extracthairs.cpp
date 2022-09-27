@@ -243,7 +243,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         // find the chromosome in reflist that matches read->chrom if the previous chromosome is different from current chromosome
         if((read->flag & 256) == 256) {
             second_align_count++;
-            fprintf(stderr, "second alignment: \"%s\" \n", read->readid);
+//            fprintf(stderr, "second alignment: \"%s\" \n", read->readid);
             continue;
         } // A bug here, bam have no sequence.
         if (read->mquality < MIN_MQ && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) continue;
