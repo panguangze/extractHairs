@@ -171,8 +171,10 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
 //    if (VCF_PHASED) {
         FRAGMENT* f = (FRAGMENT*)malloc(sizeof(FRAGMENT));
         f->id = (char*) malloc(strlen(f1->id) + 4);
+        f->barcode = (char*) malloc(strlen(f1->barcode) + 1);
         strcpy(f->id, f1->id);
         strcat(f->id,"_MP");
+        strcpy(f->barcode, f1->barcode);
         f->read_qual = (f1->read_qual + f2->read_qual) / 2;
         if (strcmp(f1->id, "D00360:94:H2YT5BCXX:1:1109:5815:14301") == 0) {
             int tmp = 33;
