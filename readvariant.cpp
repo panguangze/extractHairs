@@ -370,10 +370,12 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                 variant->heterozygous = '1'; // variant will be used for outputting hairs
                 //fprintf(stdout,"variant %s %s %s %c\n",variant->allele1,variant->allele2,variant->genotype,variant->heterozygous);
                 if (variant->bnd == 1) {
-                    char *support_reads = NULL;
+                    char **support_reads = nullptr;
                     int support_reads_info_arr = 0;
                     int sninfo = 0;
-                    sninfo = bcf_get_info_string(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
+                    sninfo = bcf_get_format_string(header, record, SUPPORT_READS_TAG,&support_reads, &support_reads_info_arr);
+                    std::string idx_support_reads = *(support_reads+SAMPLE_IDX);
+//                    sninfo = bcf_get_info_string(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
 //            if (ninfo != 0)
 //                variant->bnd_sv_len = *sv_len;
 //            if (strcmp(variant->AA, "<INS>") == 0) {
@@ -383,17 +385,30 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
 //                if (ninfo != 0)
 //                    variant->bnd_ins_seq = insSeq;
 //            }
-                    std::string tmp_reads = support_reads;
-                    std::stringstream ss(support_reads);
+//                    std::string tmp_reads = idx_support_reads;
+                    std::stringstream ss(idx_support_reads);
                     if (variant->heterozygous =='1') {
                         while( ss.good() )
                         {
                             std::string substr;
                             getline( ss, substr, ',' );
+                            std::string::size_type n = 0;
+                            const std::string s = "_COLON_";
+                            const std::string colon = ":";
+                            while ( ( n = substr.find( s, n ) ) != std::string::npos )
+                            {
+                                substr.replace(n, s.size(), colon );
+                                n += colon.size();
+                            }
+//                            substr.replace(substr.find("_COLON_"), sizeof("_COLON_") - 1, ":");
                             SUPPORT_READS.emplace(substr, variant_ss);
                         }
                     }
                     parse_bnd(variant, chromosome);
+                    free(support_reads);
+//                    free(support_reads_info_arr);
+//                    free(idx_support_reads);
+                    /*free(support_reads_info_arr)*//*;*/
                 }
                 return 1;
             }

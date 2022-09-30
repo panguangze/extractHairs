@@ -3,6 +3,7 @@
 #include "bamread.h"
 #include "readfasta.h"
 #include "map"
+#include "string"
 extern std::map<std::string, int> SUPPORT_READS;
 extern int MIN_MQ;
 extern int VERBOSE;

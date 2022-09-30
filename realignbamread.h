@@ -11,7 +11,7 @@
 //
 //#include "seqan/score.h"
 #include "edlib.h"
-#include "ssw_cpp.h"
+//#include "ssw_cpp.h"
  // anchor sequences must have unique kmers of this length
 // find the variants that are covered by the read and determine the alleles at each of those variants
 
