@@ -238,6 +238,10 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         }
         fetch_func(b, fp, header, read);
         if (SV_AD == 1 && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) {
+            reads += 1;
+            prevchrom = chrom;
+            prevtid = read->tid;
+            free_readmemory(read);
             continue;
         }
         // notice that supplementary reads is not dropped 
