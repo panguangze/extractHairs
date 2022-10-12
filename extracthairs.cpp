@@ -88,6 +88,7 @@ std::string INPUT_CONTIGS_STR;
 //int get_chrom_name(struct alignedread* read,HASHTABLE* ht,REFLIST* reflist);
 std::map<std::string, int> SUPPORT_READS;
 char* SUPPORT_READS_TAG;
+int SV_AD;
 
 #include "parsebamread.h"
 #include "realignbamread.h"
@@ -151,7 +152,8 @@ void print_options() {
     fprintf(stderr, "--vcf-phased <0/1>: if the input vcf has been phased, then we will filter reads according to phasing info\n\n");
     //fprintf(stderr, "--region <chr:start-end> : chromosome and region in BAM file, useful to process individual chromosomes or genomic regions \n");
     fprintf(stderr, "--ep <0/1> : set to 1 to estimate HMM parameters from aligned reads (only with long reads), default = 0\n");
-	fprintf(stderr, "--hom <0/1> : set to 1 to include homozygous variants for processing, default = 0 (only heterozygous) \n\n");
+    fprintf(stderr, "--sv_ad <0/1> : This is for sv addition default = 0\n");
+    fprintf(stderr, "--hom <0/1> : set to 1 to include homozygous variants for processing, default = 0 (only heterozygous) \n\n");
     fprintf(stderr, "--contigs <contig names> : extract for specific contigs, split with comma\n");
     fprintf(stderr, "--support_read_tag <INFO tag> : where the support reads at vcf tag\n");
     fprintf(stderr, "--idx <vcf sample index> : where the \n");
@@ -235,6 +237,9 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
             if (sam_read1(fp,header,b) < 0) break;
         }
         fetch_func(b, fp, header, read);
+        if (SV_AD == 1 && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) {
+            continue;
+        }
         // notice that supplementary reads is not dropped 
 //        if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)) || read->mquality < MIN_MQ) {
 //            free_readmemory(read);
@@ -537,6 +542,8 @@ int main(int argc, char** argv) {
 			if (SUM_ALL_ALIGN >=1) fprintf(stderr, "\nusing sum of all alignments for scoring \n");
 		}else if (strcmp(argv[i], "--ep") == 0) { 
 			ESTIMATE_PARAMS = atoi(argv[i+1]);
+        }else if (strcmp(argv[i], "--sv_ad") == 0) {
+            SV_AD = atoi(argv[i+1]);
         } else if (strcmp(argv[i], "--idx") == 0) {
             SAMPLE_IDX = atoi(argv[i+1]);
         }else{
