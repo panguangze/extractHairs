@@ -144,6 +144,7 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
     	    //fprintf(outfile,":%c",fragment->strand);
 	    for (i = 0; i < fragment->variants; i++) fprintf(outfile, " %d:%c:%d",fragment->alist[i].varid+1,fragment->alist[i].allele,(char)fragment->alist[i].qv-33);
 	}
+    fprintf(outfile, " SV");
     fprintf(outfile, "\n");
 
     return 0;

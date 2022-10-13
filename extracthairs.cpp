@@ -301,6 +301,9 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         // add check to see if the mate and its read are on same chromosome, bug for contigs, july 16 2012
         if (((read->flag & 8) || fragment.absIS > MAX_IS || fragment.absIS < MIN_IS || read->IS == 0 || !(read->flag & 1) || read->tid != read->mtid)) // single read
         {
+            if (is_found) {
+                fragment.bnd_reads = true;
+            }
             fragment.variants = 0; // v1 =0; v2=0;
             if ( (read->flag & 16) ==16) fragment.strand = '-'; else fragment.strand = '+';
             if (chrom >= 0 && PEONLY == 0) {
@@ -334,6 +337,9 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
             }
         } else // paired-end read
         {
+            if (is_found) {
+                fragment.bnd_reads = true;
+            }
             fragment.variants = 0;
             fragment.id = read->readid; //v1 =0; v2=0;
             fragment.barcode = read->barcode;

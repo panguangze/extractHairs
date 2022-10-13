@@ -34,6 +34,7 @@ typedef struct {
     char strand; // added 01/26/2018
     int rescued;
     float dm;
+    bool bnd_reads;
 } FRAGMENT;
 
 // when --vcf-phased specified, filter fragment by phasing info
