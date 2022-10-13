@@ -237,28 +237,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
             if (sam_read1(fp,header,b) < 0) break;
         }
         fetch_func(b, fp, header, read);
-        if (SV_AD == 1 && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) {
-            reads += 1;
-            prevchrom = chrom;
-            prevtid = read->tid;
-            free_readmemory(read);
-            continue;
-        }
-        // notice that supplementary reads is not dropped 
-//        if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)) || read->mquality < MIN_MQ) {
-//            free_readmemory(read);
-//            continue;
-//        }
-        // find the chromosome in reflist that matches read->chrom if the previous chromosome is different from current chromosome
-        if((read->flag & 256) == 256) {
-            second_align_count++;
-            reads += 1;
-            prevchrom = chrom;
-            prevtid = read->tid;
-            free_readmemory(read);
-//            fprintf(stderr, "second alignment: \"%s\" \n", read->readid);
-            continue;
-        } // A bug here, bam have no sequence.
+ // A bug here, bam have no sequence.
         if (read->mquality < MIN_MQ && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) continue;
         if (read->tid != prevtid) {
         chrom = getindex(ht,read->chrom);  // this will return -1 if the contig name is not  in the VCF file 
@@ -282,6 +261,28 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 }
             }
         } else chrom = prevchrom;
+        if (SV_AD == 1 && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) {
+            reads += 1;
+            prevchrom = chrom;
+            prevtid = read->tid;
+            free_readmemory(read);
+            continue;
+        }
+        // notice that supplementary reads is not dropped
+//        if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)) || read->mquality < MIN_MQ) {
+//            free_readmemory(read);
+//            continue;
+//        }
+        // find the chromosome in reflist that matches read->chrom if the previous chromosome is different from current chromosome
+        if((read->flag & 256) == 256) {
+            second_align_count++;
+            reads += 1;
+            prevchrom = chrom;
+            prevtid = read->tid;
+            free_readmemory(read);
+//            fprintf(stderr, "second alignment: \"%s\" \n", read->readid);
+            continue;
+        }
         //if (chrom_missing_index ==1) { prevtid = read->tid; free_readmemory(read); continue; } 
         if(strcmp("D00360:95:H2YWMBCXX:2:2214:11806:83148", read->readid) == 0) {
             int mm = 9;
