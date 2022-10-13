@@ -260,20 +260,23 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                     }
                 }
         } else chrom = prevchrom;
-        if (read->mquality < MIN_MQ && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) {
-            reads += 1;
-            prevchrom = chrom;
-            prevtid = read->tid;
-            free_readmemory(read);
-            continue;
+        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
+        if (!is_found) {
+            if (read->mquality < MIN_MQ || SV_AD == 1) {
+                reads += 1;
+                prevchrom = chrom;
+                prevtid = read->tid;
+                free_readmemory(read);
+                continue;
+            }
         }
-        if (SV_AD == 1 && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) {
-            reads += 1;
-            prevchrom = chrom;
-            prevtid = read->tid;
-            free_readmemory(read);
-            continue;
-        }
+//        if (SV_AD == 1 && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) {
+//            reads += 1;
+//            prevchrom = chrom;
+//            prevtid = read->tid;
+//            free_readmemory(read);
+//            continue;
+//        }
         // notice that supplementary reads is not dropped
 //        if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)) || read->mquality < MIN_MQ) {
 //            free_readmemory(read);
@@ -308,7 +311,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 				fragment.rescued = read->rescued;
 				fragment.dm = read->dm;
 
-                if (SUPPORT_READS_TAG != nullptr && SUPPORT_READS.find(std::string(read->readid)) != SUPPORT_READS.end()) {
+                if (SUPPORT_READS_TAG != nullptr && is_found) {
                     auto pos = SUPPORT_READS[std::string(read->readid)];
                     fragment.alist[fragment.variants].varid = pos;
                     fragment.alist[fragment.variants].allele = '1';
@@ -337,7 +340,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 			fragment.read_qual = read->mquality;
 			fragment.rescued = read->rescued;
             fragment.dm = read->dm;
-            if (SUPPORT_READS_TAG != nullptr && SUPPORT_READS.find(std::string(read->readid)) != SUPPORT_READS.end()) {
+            if (SUPPORT_READS_TAG != nullptr && is_found) {
                 auto pos = SUPPORT_READS[std::string(read->readid)];
                 fragment.alist[fragment.variants].varid = pos;
                 fragment.alist[fragment.variants].allele = '1';
