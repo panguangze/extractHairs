@@ -238,7 +238,6 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         }
         fetch_func(b, fp, header, read);
  // A bug here, bam have no sequence.
-        if (read->mquality < MIN_MQ && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) continue;
         if (read->tid != prevtid) {
         chrom = getindex(ht,read->chrom);  // this will return -1 if the contig name is not  in the VCF file 
 	    if (chrom < 0) fprintf(stderr,"chrom \"%s\" not in VCF file, skipping all reads for this chrom.... \n",read->chrom);
@@ -261,6 +260,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 }
             }
         } else chrom = prevchrom;
+        if (read->mquality < MIN_MQ && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) continue;
         if (SV_AD == 1 && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) {
             reads += 1;
             prevchrom = chrom;
