@@ -203,6 +203,7 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
                 pos++;
             }
         }
+        f->bnd_reads = f1->bnd_reads;
     print_fragment(f, varlist,outfile);
     free(f);
 //        int is_print = filter_by_phasing_info(f, varlist);

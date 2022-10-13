@@ -195,6 +195,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     FRAGMENT fragment;
     fragment.variants = 0;
     fragment.alist = (allele*) malloc(sizeof (allele)*16184);
+    fragment.bnd_reads = false;
 
     samFile *fp;
     if ((fp = sam_open(bamfile, "rb")) == 0) {
@@ -237,7 +238,21 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
             if (sam_read1(fp,header,b) < 0) break;
         }
         fetch_func(b, fp, header, read);
- // A bug here, bam have no sequence.
+        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
+        if ((!is_found && (read->mquality < MIN_MQ || SV_AD == 1 || (read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)))) || (read->flag & 256) == 256) {
+//            reads += 1;
+//            prevchrom = chrom;
+//            prevtid = read->tid;
+            free_readmemory(read);
+            continue;
+        }
+        // notice that supplementary reads is not dropped
+//        if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)) || read->mquality < MIN_MQ) {
+//            free_readmemory(read);
+//            continue;
+//        }
+        fragment.bnd_reads = false;
+        // A bug here, bam have no sequence.
         if (read->tid != prevtid) {
             chrom = getindex(ht,read->chrom);  // this will return -1 if the contig name is not  in the VCF file
             if (chrom < 0) fprintf(stderr,"chrom \"%s\" not in VCF file, skipping all reads for this chrom.... \n",read->chrom);
@@ -260,16 +275,6 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                     }
                 }
         } else chrom = prevchrom;
-        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
-        if (!is_found) {
-            if (read->mquality < MIN_MQ || SV_AD == 1) {
-                reads += 1;
-                prevchrom = chrom;
-                prevtid = read->tid;
-                free_readmemory(read);
-                continue;
-            }
-        }
 //        if (SV_AD == 1 && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) {
 //            reads += 1;
 //            prevchrom = chrom;
@@ -277,43 +282,69 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 //            free_readmemory(read);
 //            continue;
 //        }
-        // notice that supplementary reads is not dropped
-//        if ((read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)) || read->mquality < MIN_MQ) {
+
+        // find the chromosome in reflist that matches read->chrom if the previous chromosome is different from current chromosome
+//        if((read->flag & 256) == 256) {
+//            second_align_count++;
+//            reads += 1;
+//            prevchrom = chrom;
+//            prevtid = read->tid;
 //            free_readmemory(read);
+//            fprintf(stderr, "second alignment: \"%s\" \n", read->readid);
 //            continue;
 //        }
-        // find the chromosome in reflist that matches read->chrom if the previous chromosome is different from current chromosome
-        if((read->flag & 256) == 256) {
-            second_align_count++;
-            reads += 1;
-            prevchrom = chrom;
-            prevtid = read->tid;
-            free_readmemory(read);
-//            fprintf(stderr, "second alignment: \"%s\" \n", read->readid);
-            continue;
-        }
-        //if (chrom_missing_index ==1) { prevtid = read->tid; free_readmemory(read); continue; } 
-        if(strcmp("D00360:95:H2YWMBCXX:2:2214:11806:83148", read->readid) == 0) {
-            int mm = 9;
-        }
+        else{
+            fragment.absIS = (read->IS < 0) ? -1 * read->IS : read->IS;
+            // add check to see if the mate and its read are on same chromosome, bug for contigs, july 16 2012
+            if (((read->flag & 8) || fragment.absIS > MAX_IS || fragment.absIS < MIN_IS || read->IS == 0 ||
+                 !(read->flag & 1) || read->tid != read->mtid)) // single read
+            {
+                if (is_found) {
+                    fragment.bnd_reads = true;
+                }
+                fragment.variants = 0; // v1 =0; v2=0;
+                if ((read->flag & 16) == 16) fragment.strand = '-'; else fragment.strand = '+';
+                if (chrom >= 0 && PEONLY == 0) {
 
-        fragment.absIS = (read->IS < 0) ? -1 * read->IS : read->IS;
-        // add check to see if the mate and its read are on same chromosome, bug for contigs, july 16 2012
-        if (((read->flag & 8) || fragment.absIS > MAX_IS || fragment.absIS < MIN_IS || read->IS == 0 || !(read->flag & 1) || read->tid != read->mtid)) // single read
-        {
-            if (is_found) {
-                fragment.bnd_reads = true;
-            }
-            fragment.variants = 0; // v1 =0; v2=0;
-            if ( (read->flag & 16) ==16) fragment.strand = '-'; else fragment.strand = '+';
-            if (chrom >= 0 && PEONLY == 0) {
+                    fragment.id = read->readid;
+                    fragment.barcode = read->barcode;
+                    fragment.read_qual = read->mquality;
+                    fragment.rescued = read->rescued;
+                    fragment.dm = read->dm;
 
-                fragment.id = read->readid;
+                    if (SUPPORT_READS_TAG != nullptr && is_found) {
+                        auto pos = SUPPORT_READS[std::string(read->readid)];
+                        fragment.alist[fragment.variants].varid = pos;
+                        fragment.alist[fragment.variants].allele = '1';
+                        fragment.alist[fragment.variants].qv = QVoffset + 10;
+                        fragment.variants++;
+                        varlist[pos].depth++;
+                        if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
+                        else varlist[pos].A2 += 1;
+                    }
+
+
+                    if (REALIGN_VARIANTS) {
+                        realign_and_extract_variants_read(read, ht, chromvars, varlist, 0, &fragment, chrom, reflist);
+                    } else {
+                        extract_variants_read(read, ht, chromvars, varlist, 0, &fragment, chrom, reflist);
+                    }
+                    if (fragment.variants >= 2) VOfragments[0]++;
+                    else if (fragment.variants >= 1) VOfragments[1]++;
+                    if (fragment.variants >= 2 || (SINGLEREADS == 1 && fragment.variants >= 1))
+                        print_fragment(&fragment, varlist, fragment_file);
+                }
+            } else // paired-end read
+            {
+                if (is_found) {
+                    fragment.bnd_reads = true;
+                }
+                fragment.variants = 0;
+                fragment.id = read->readid; //v1 =0; v2=0;
                 fragment.barcode = read->barcode;
-				fragment.read_qual = read->mquality;
-				fragment.rescued = read->rescued;
-				fragment.dm = read->dm;
-
+                fragment.read_qual = read->mquality;
+                fragment.rescued = read->rescued;
+                fragment.dm = read->dm;
                 if (SUPPORT_READS_TAG != nullptr && is_found) {
                     auto pos = SUPPORT_READS[std::string(read->readid)];
                     fragment.alist[fragment.variants].varid = pos;
@@ -324,48 +355,19 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                     if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
                     else varlist[pos].A2 += 1;
                 }
+                if (chrom >= 0) extract_variants_read(read, ht, chromvars, varlist, 1, &fragment, chrom, reflist);
 
-
-                if (REALIGN_VARIANTS){
-                    realign_and_extract_variants_read(read,ht,chromvars,varlist,0,&fragment,chrom,reflist);
-                }else{
-                    extract_variants_read(read,ht,chromvars,varlist,0,&fragment,chrom,reflist);
-                }
-                if (fragment.variants >=2) VOfragments[0]++;
-				else if (fragment.variants >=1) VOfragments[1]++;
-                if (fragment.variants >= 2 || (SINGLEREADS == 1 && fragment.variants >= 1)) print_fragment(&fragment, varlist, fragment_file);
-            }
-        } else // paired-end read
-        {
-            if (is_found) {
-                fragment.bnd_reads = true;
-            }
-            fragment.variants = 0;
-            fragment.id = read->readid; //v1 =0; v2=0;
-            fragment.barcode = read->barcode;
-			fragment.read_qual = read->mquality;
-			fragment.rescued = read->rescued;
-            fragment.dm = read->dm;
-            if (SUPPORT_READS_TAG != nullptr && is_found) {
-                auto pos = SUPPORT_READS[std::string(read->readid)];
-                fragment.alist[fragment.variants].varid = pos;
-                fragment.alist[fragment.variants].allele = '1';
-                fragment.alist[fragment.variants].qv = QVoffset + 10;
-                fragment.variants++;
-                varlist[pos].depth++;
-                if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
-                else varlist[pos].A2 += 1;
-            }
-            if (chrom >=0) extract_variants_read(read,ht,chromvars,varlist,1,&fragment,chrom,reflist);
-
-            //fprintf(stderr,"paired read stats %s %d flag %d IS %d\n",read->chrom,read->cigs,read->flag,read->IS);
-            if (fragment.variants > 0) {
-                //fprintf(stderr,"variants %d read %s %s \n",fragment.variants,read->chrom,read->readid);
-                add_fragment(flist, &fragment, read, fragments);
-                fragments++;
-                if (fragments >= MAXFRAG) {
-                    fprintf(stderr, "exceeded max #cached fragments: %d,increase MAXFRAGMENTS using --maxfragments option \n", MAXFRAG);
-                    return -1;
+                //fprintf(stderr,"paired read stats %s %d flag %d IS %d\n",read->chrom,read->cigs,read->flag,read->IS);
+                if (fragment.variants > 0) {
+                    //fprintf(stderr,"variants %d read %s %s \n",fragment.variants,read->chrom,read->readid);
+                    add_fragment(flist, &fragment, read, fragments);
+                    fragments++;
+                    if (fragments >= MAXFRAG) {
+                        fprintf(stderr,
+                                "exceeded max #cached fragments: %d,increase MAXFRAGMENTS using --maxfragments option \n",
+                                MAXFRAG);
+                        return -1;
+                    }
                 }
             }
         }
