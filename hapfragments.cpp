@@ -396,6 +396,7 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                         //for (j=0;j<flist[i].variants;j++) fprintf(stdout,"%d ",flist[i].alist[j].varid); fprintf(stdout,"| ");
                         //for (j=0;j<flist[i+1].variants;j++) fprintf(stdout,"%d ",flist[i+1].alist[j].varid);
                         //fprintf(stdout,"order of variants not correct %s \t",flist[i].id);
+                        fragment.bnd_reads = flist[i].bnd_reads;
                         print_fragment(&fragment, varlist, fragment_file);
                         free(fragment.id);
                     }

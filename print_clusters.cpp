@@ -100,6 +100,7 @@ int generate_single_fragment(struct alignedread** readlist, int s, int e, int le
     FRAGMENT fragment;
     fragment.variants = 0;
     fragment.alist = (allele*) malloc(sizeof (allele)*4096);
+    fragment.bnd_reads = flist[readlist[i]->findex].bnd_reads;
     for (k = s; k < e; k++) {
         i = k;
         if (readlist[i]->IS < 0 || ((readlist[i]->flag & 1024) == 1024)) continue;
@@ -141,6 +142,7 @@ int generate_single_fragment(struct alignedread** readlist, int s, int e, int le
     FRAGMENT fp;
     fp.variants = 0;
     fp.alist = (allele*) malloc(sizeof (allele) * unique_variants);
+    fp.bnd_reads = fragment.bnd_reads;
 
     counts[0] = counts[1] = counts[2] = counts[3] = 0;
     counts[(int) fragment.alist[0].allele - 48]++;
