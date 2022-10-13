@@ -239,28 +239,34 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         fetch_func(b, fp, header, read);
  // A bug here, bam have no sequence.
         if (read->tid != prevtid) {
-        chrom = getindex(ht,read->chrom);  // this will return -1 if the contig name is not  in the VCF file 
-	    if (chrom < 0) fprintf(stderr,"chrom \"%s\" not in VCF file, skipping all reads for this chrom.... \n",read->chrom);
-	    else 
-        {
-            fprintf(stderr,"processing reads mapped to chrom \"%s\" \n",read->chrom);
-		}
-        // doing this for every read, can replace this by string comparison ..april 4 2012
-            i = read->tid;
-            if (reflist->ns > 0) {
-                reflist->current = i;
-                if (i >= reflist->ns || i < 0 || strcmp(reflist->names[i], read->chrom) != 0) {
-                    reflist->current = -1;
-                    for (i = 0; i < reflist->ns; i++) {
-                        if (strcmp(reflist->names[i], read->chrom) == 0) {
-                            reflist->current = i;
-                            break;
+            chrom = getindex(ht,read->chrom);  // this will return -1 if the contig name is not  in the VCF file
+            if (chrom < 0) fprintf(stderr,"chrom \"%s\" not in VCF file, skipping all reads for this chrom.... \n",read->chrom);
+            else
+            {
+                fprintf(stderr,"processing reads mapped to chrom \"%s\" \n",read->chrom);
+            }
+            // doing this for every read, can replace this by string comparison ..april 4 2012
+                i = read->tid;
+                if (reflist->ns > 0) {
+                    reflist->current = i;
+                    if (i >= reflist->ns || i < 0 || strcmp(reflist->names[i], read->chrom) != 0) {
+                        reflist->current = -1;
+                        for (i = 0; i < reflist->ns; i++) {
+                            if (strcmp(reflist->names[i], read->chrom) == 0) {
+                                reflist->current = i;
+                                break;
+                            }
                         }
                     }
                 }
-            }
         } else chrom = prevchrom;
-        if (read->mquality < MIN_MQ && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) continue;
+        if (read->mquality < MIN_MQ && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) {
+            reads += 1;
+            prevchrom = chrom;
+            prevtid = read->tid;
+            free_readmemory(read);
+            continue;
+        }
         if (SV_AD == 1 && SUPPORT_READS.find(read->readid) == SUPPORT_READS.end()) {
             reads += 1;
             prevchrom = chrom;
