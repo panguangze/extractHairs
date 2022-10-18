@@ -370,12 +370,12 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                 variant->heterozygous = '1'; // variant will be used for outputting hairs
                 //fprintf(stdout,"variant %s %s %s %c\n",variant->allele1,variant->allele2,variant->genotype,variant->heterozygous);
                 if (variant->bnd == 1) {
-                    char *support_reads = nullptr;
+                    char **support_reads = nullptr;
                     int support_reads_info_arr = 0;
                     int sninfo = 0;
-//                    sninfo = bcf_get_format_string(header, record, SUPPORT_READS_TAG,&support_reads, &support_reads_info_arr);
-//                    std::string idx_support_reads = *(support_reads+SAMPLE_IDX);
-                    sninfo = bcf_get_info_string(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
+                    sninfo = bcf_get_format_string(header, record, SUPPORT_READS_TAG,&support_reads, &support_reads_info_arr);
+                    std::string idx_support_reads = *(support_reads+SAMPLE_IDX);
+//                    sninfo = bcf_get_info_string(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
 //            if (ninfo != 0)
 //                variant->bnd_sv_len = *sv_len;
 //            if (strcmp(variant->AA, "<INS>") == 0) {
@@ -386,7 +386,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
 //                    variant->bnd_ins_seq = insSeq;
 //            }
 //                    std::string tmp_reads = idx_support_reads;
-                    std::stringstream ss(support_reads);
+                    std::stringstream ss(idx_support_reads);
                     if (variant->heterozygous =='1') {
                         while( ss.good() )
                         {
