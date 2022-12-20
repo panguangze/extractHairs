@@ -245,7 +245,10 @@ std::map<int, float> parse_freq(std::string freq_file){
 // TODO: test for spanning read, i.e. split alignment: 1) we dont need to consider the BND direction for them 2) notice that the bnd is covered through hardclip/softclip. 3) notice that the bnd alignment is not exactly matching
 // TODO: test for discordant support reads, i.e. abnormal insertion size. 1) need to consider the direction? 2) need to use the pair-ended info to locate breake-end
 int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, int paired, FRAGMENT* fragment, int chrom, REFLIST* reflist) {
-
+    if (strcmp(read->readid,"SRR5114979.258584167") == 0){
+        auto tmppp = 3;
+    }
+    std::vector<int> bnd_sses; // reads cover bnds
     int start = read->position;
     int end = start + read->span;
     int ss = 0, firstvar = 0, j = 0, ov = 0, i = 0;     // ss -> variant id; j -> hash index, ov -> no of variants covered by the reads
@@ -292,6 +295,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         if (op == BAM_CMATCH) {
             while (ss <= chromvars[chrom].last && varlist[ss].position >= start + l2 && varlist[ss].position < start + l2 + ol) {
                 if(varlist[ss].bnd == 1) {
+                    bnd_sses.push_back(ss);
                     support_ref_bnd_reads = true;
                     bnd_ss = ss;
                 }
@@ -309,6 +313,8 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
             l1 += ol;
             l2 += ol;
         } else if (op == BAM_CINS) {
+            fragment->is_all_m = false;
+            support_ref_bnd_reads = false;
             if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 && varlist[ss].type == ol && PARSEINDELS == 1 && ss <= chromvars[chrom].last && varlist[ss].bnd == 0) {
                 if (IFLAG) fprintf(stdout, "%s INSERTION %d %s:%d:%s:%s\n", read->readid, start + l2, varlist[ss].chrom, varlist[ss].position, varlist[ss].RA, varlist[ss].AA);
                 fragment->alist[fragment->variants].varid = ss;
@@ -320,13 +326,13 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
                 else varlist[ss].A2 += 1;
                 ss++;
             } else if(varlist[ss].bnd == 1) {
-                support_ref_bnd_reads = true;
                 bnd_ss = ss;
                 ss++;
             }
             l1 += ol;
         } else if (op == BAM_CDEL) {
-
+            fragment->is_all_m = false;
+            support_ref_bnd_reads = false;
             if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 && varlist[ss].type == -1 * ol  && PARSEINDELS == 1 && ss <= chromvars[chrom].last && varlist[ss].bnd == 0) {
                 if (IFLAG) fprintf(stdout, "%s DELETION %d %s:%d:%s:%s\n", read->readid, start + l2, varlist[ss].chrom, varlist[ss].position, varlist[ss].RA, varlist[ss].AA);
                 fragment->alist[fragment->variants].varid = ss;
@@ -338,14 +344,19 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
                 fragment->variants++;
                 ss++;
             } else if(varlist[ss].bnd == 1) {
-                support_ref_bnd_reads = true;
+//                support_ref_bnd_reads = true;
                 bnd_ss = ss;
                 ss++;
             }
             l2 += ol;
-        } else if (op == BAM_CREF_SKIP) l2 += ol;
+        } else if (op == BAM_CREF_SKIP){
+            fragment->is_all_m = false;
+            support_ref_bnd_reads = false;
+            l2 += ol;
+        }
         else if ( op == BAM_CSOFT_CLIP) // primary alignment
         {
+            fragment->is_all_m = false;
             support_ref_bnd_reads = false;
 
             //fixme sv position is not a precise location, a range +-5,not used , reads provided
@@ -379,6 +390,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         }
         else if (op == BAM_CHARD_CLIP) // secondary alignment ,notice that this is quite uncommon for reads with leght less than 150bp
         {
+            fragment->is_all_m = false;
             support_ref_bnd_reads = false;
 
             if (PARSEBND && SUPPORT_READS_TAG == nullptr)
@@ -472,17 +484,30 @@ if (SUPPORT_READS_TAG == nullptr && PARSEBND && DATA_TYPE == 1)
             }
         }
     }
-if(PARSEBND && SUPPORT_READS_TAG == nullptr) {
-    if(support_ref_bnd_reads) {
-        fragment->alist[fragment->variants].varid = bnd_ss;
+//if
+if (PARSEBND && support_ref_bnd_reads) {
+    for (auto cbnd_ss : bnd_sses) {
+        fragment->alist[fragment->variants].varid = cbnd_ss;
         fragment->alist[fragment->variants].allele = '0';
-        fragment->alist[fragment->variants ].qv = read->quality[l1];
+        fragment->alist[fragment->variants ].qv = 60;
+        fragment->alist[fragment->variants].is_bnd = true;
         fragment->variants++;
-        varlist[bnd_ss].depth++;
-        if ((read->flag & 16) == 16) varlist[bnd_ss].A2 += 1 << 16;
-        else varlist[bnd_ss].A2 += 1;
+        varlist[cbnd_ss].depth++;
+        if ((read->flag & 16) == 16) varlist[cbnd_ss].A2 += 1 << 16;
+        else varlist[cbnd_ss].A2 += 1;
     }
 }
+//if(PARSEBND && SUPPORT_READS_TAG == nullptr) {
+//    if(support_ref_bnd_reads) {
+//        fragment->alist[fragment->variants].varid = bnd_ss;
+//        fragment->alist[fragment->variants].allele = '0';
+//        fragment->alist[fragment->variants ].qv = read->quality[l1];
+//        fragment->variants++;
+//        varlist[bnd_ss].depth++;
+//        if ((read->flag & 16) == 16) varlist[bnd_ss].A2 += 1 << 16;
+//        else varlist[bnd_ss].A2 += 1;
+//    }
+//}
      return 0;
     //	printf("read %s %d %s %d %d %d %s XM %d parsed %d %d %d vars %d\n",read->readid,read->flag,read->chrom,read->position,read->mquality,read->IS,read->cigar,read->XM,chrom,start,end,ov);
 }
@@ -509,6 +534,8 @@ int add_fragment(FRAGMENT* flist, FRAGMENT* fragment, struct alignedread* read, 
     flist[fragments].paired = 1;
     flist[fragments].absIS = fragment->absIS;
     flist[fragments].read_qual = fragment->read_qual;
+    flist[fragments].bnd_reads = fragment->bnd_reads;
+    flist[fragments].is_all_m = fragment->is_all_m;
 
     // april 10 2012 change made for Poplar data to not use matepos...
     if (read->IS > 0) flist[fragments].matepos = read->mateposition;
@@ -520,6 +547,7 @@ int add_fragment(FRAGMENT* flist, FRAGMENT* fragment, struct alignedread* read, 
         flist[fragments].alist[i].varid = fragment->alist[i].varid;
         flist[fragments].alist[i].allele = fragment->alist[i].allele;
         flist[fragments].alist[i].qv = fragment->alist[i].qv;
+        flist[fragments].alist[i].is_bnd = fragment->alist[i].is_bnd;
     }
     sl = strlen(read->readid);
     flist[fragments].id = (char*) malloc(sl + 1);

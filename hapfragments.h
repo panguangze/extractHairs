@@ -19,6 +19,7 @@ typedef struct {
     char allele;
     char qv;
     int varid; // allele is 0/1    varid is index to varlist[varid] gives all information about the variant
+    bool is_bnd = false;
 } allele;
 
 typedef struct {
@@ -35,6 +36,7 @@ typedef struct {
     int rescued;
     float dm;
     bool bnd_reads;
+    bool is_all_m = true;
 } FRAGMENT;
 
 // when --vcf-phased specified, filter fragment by phasing info

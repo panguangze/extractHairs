@@ -196,6 +196,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     fragment.variants = 0;
     fragment.alist = (allele*) malloc(sizeof (allele)*16184);
     fragment.bnd_reads = false;
+    fragment.is_all_m = true;
 
     samFile *fp;
     if ((fp = sam_open(bamfile, "rb")) == 0) {
@@ -298,9 +299,11 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         if (((read->flag & 8) || fragment.absIS > MAX_IS || fragment.absIS < MIN_IS || read->IS == 0 ||
              !(read->flag & 1) || read->tid != read->mtid)) // single read
         {
+            fragment.is_all_m = false;
             if (is_found) {
                 fragment.bnd_reads = true;
             }
+            for (int t = 0; t < fragment.variants; t++) {fragment.alist[t].is_bnd=false;}
             fragment.variants = 0; // v1 =0; v2=0;
             if ((read->flag & 16) == 16) fragment.strand = '-'; else fragment.strand = '+';
             if (chrom >= 0 && PEONLY == 0) {
@@ -338,6 +341,8 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
             if (is_found) {
                 fragment.bnd_reads = true;
             }
+            fragment.is_all_m = true;
+            for (int t = 0; t < fragment.variants; t++) {fragment.alist[t].is_bnd=false;}
             fragment.variants = 0;
             fragment.id = read->readid; //v1 =0; v2=0;
             fragment.barcode = read->barcode;

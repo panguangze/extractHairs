@@ -80,6 +80,9 @@ int compare_alleles(const void *a, const void *b) {
 }
 
 int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
+    if (fragment->is_all_m) {
+        auto tmmpp = 333;
+    }
     if (fragment->variants < 2 && DATA_TYPE != 2) return 0;
     if (strcmp(fragment->id, "D00360:95:H2YWMBCXX:2:2214:11806:83148") == 0) {
         int tmp = 33;
@@ -122,14 +125,39 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
     
     if (PRINT_COMPACT ==1)
 	{
+        int start_idx = 1;
+        if (fragment->alist[0].is_bnd) {
+            if (fragment->is_all_m) {
+                fprintf(outfile, " %d %c", fragment->alist[0].varid + 1, fragment->alist[0].allele);
+            } else {
+                fprintf(outfile, " %d %c", fragment->alist[1].varid + 1, fragment->alist[1].allele);
+                start_idx = 2;
+            }
+        } else {
+            fprintf(outfile, " %d %c", fragment->alist[0].varid + 1, fragment->alist[0].allele);
+        }
 
-        fprintf(outfile, " %d %c", fragment->alist[0].varid + 1, fragment->alist[0].allele);
-        for (i = 1; i < fragment->variants; i++) {
+//        fprintf(outfile, " %d %c", fragment->alist[0].varid + 1, fragment->alist[0].allele);
+        for (i = start_idx; i < fragment->variants; i++) {
+            if (fragment->alist[i].is_bnd) {
+                if (!fragment->is_all_m) {
+                    continue;
+                } else {
+                    auto tmmp = 3;
+                }
+            }
             if (fragment->alist[i].varid - fragment->alist[i - 1].varid == 1) fprintf(outfile, "%c", fragment->alist[i].allele);
             else fprintf(outfile, " %d %c", fragment->alist[i].varid + 1, fragment->alist[i].allele);
         }
         fprintf(outfile, " ");
-        for (i = 0; i < fragment->variants; i++) fprintf(outfile, "%c", fragment->alist[i].qv);
+        for (i = start_idx - 1; i < fragment->variants; i++) {
+            if (fragment->alist[i].is_bnd) {
+                if (!fragment->is_all_m) {
+                    continue;
+                }
+            }
+            fprintf(outfile, "%c", fragment->alist[i].qv);
+        }
         fprintf(outfile, " ");
 	    fprintf(outfile, "%d", fragment->read_qual);
         if (DATA_TYPE == 2)
@@ -204,6 +232,7 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
             }
         }
         f->bnd_reads = f1->bnd_reads;
+        f->is_all_m = f1->is_all_m && f2->is_all_m && !f1->bnd_reads && !f2->bnd_reads;
     print_fragment(f, varlist,outfile);
     free(f);
 //        int is_print = filter_by_phasing_info(f, varlist);
@@ -327,18 +356,24 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
         while (i < (*fragments) - 1) {
             if (strcmp(flist[i].id, flist[i + 1].id) == 0) // mate pair with both ends having at least one variant
             {
+                fragment.bnd_reads = flist[i].bnd_reads;
+                fragment.is_all_m = flist[i].is_all_m;
                 //fprintf(stdout,"mate-pair %s %s %s\n",flist[i].id);
                 if (flist[i].alist[flist[i].variants - 1].varid <= flist[i + 1].alist[0].varid) print_matepair(&flist[i], &flist[i + 1], varlist, fragment_file);
                 else if (flist[i + 1].alist[flist[i + 1].variants - 1].varid < flist[i].alist[0].varid) print_matepair(&flist[i + 1], &flist[i], varlist, fragment_file);
                 else if (flist[i].variants + flist[i + 1].variants >= 2) {
                     j = 0;
                     k = 0;
+                    for (int t = 0; t < fragment.variants; t++) {
+                        fragment.alist[t].is_bnd = false;
+                    }
                     fragment.variants = 0;
                     while (j < flist[i].variants || k < flist[i + 1].variants) {
                         if (j >= flist[i].variants) {
                             fragment.alist[fragment.variants].varid = flist[i + 1].alist[k].varid;
                             fragment.alist[fragment.variants].allele = flist[i + 1].alist[k].allele;
                             fragment.alist[fragment.variants].qv = flist[i + 1].alist[k].qv;
+                            fragment.alist[fragment.variants].is_bnd = flist[i + 1].alist[k].is_bnd;
                             fragment.variants++;
                             k++;
                             continue;
@@ -347,6 +382,7 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                             fragment.alist[fragment.variants].varid = flist[i].alist[j].varid;
                             fragment.alist[fragment.variants].allele = flist[i].alist[j].allele;
                             fragment.alist[fragment.variants].qv = flist[i].alist[j].qv;
+                            fragment.alist[fragment.variants].is_bnd = flist[i + 1].alist[k].is_bnd;
                             fragment.variants++;
                             j++;
                             continue;
@@ -356,12 +392,16 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                             fragment.alist[fragment.variants].varid = flist[i].alist[j].varid;
                             fragment.alist[fragment.variants].allele = flist[i].alist[j].allele;
                             fragment.alist[fragment.variants].qv = flist[i].alist[j].qv;
+                            fragment.alist[fragment.variants].is_bnd = flist[i + 1].alist[k].is_bnd;
+
                             fragment.variants++;
                             j++;
                         } else if (flist[i].alist[j].varid > flist[i + 1].alist[k].varid) {
                             fragment.alist[fragment.variants].varid = flist[i + 1].alist[k].varid;
                             fragment.alist[fragment.variants].allele = flist[i + 1].alist[k].allele;
                             fragment.alist[fragment.variants].qv = flist[i + 1].alist[k].qv;
+                            fragment.alist[fragment.variants].is_bnd = flist[i + 1].alist[k].is_bnd;
+
                             fragment.variants++;
                             k++;
                         } else if (flist[i].alist[j].allele == flist[i + 1].alist[k].allele) // consistent
@@ -369,6 +409,8 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                             fragment.alist[fragment.variants].varid = flist[i].alist[j].varid;
                             fragment.alist[fragment.variants].allele = flist[i].alist[j].allele;
                             fragment.alist[fragment.variants].qv = flist[i].alist[j].qv;
+                            fragment.alist[fragment.variants].is_bnd = flist[i + 1].alist[k].is_bnd;
+
                             if (flist[i + 1].alist[k].qv > flist[i].alist[j].qv) fragment.alist[fragment.variants].qv = flist[i + 1].alist[k].qv;
                             fragment.variants++;
                             j++;
@@ -396,7 +438,6 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                         //for (j=0;j<flist[i].variants;j++) fprintf(stdout,"%d ",flist[i].alist[j].varid); fprintf(stdout,"| ");
                         //for (j=0;j<flist[i+1].variants;j++) fprintf(stdout,"%d ",flist[i+1].alist[j].varid);
                         //fprintf(stdout,"order of variants not correct %s \t",flist[i].id);
-                        fragment.bnd_reads = flist[i].bnd_reads;
                         print_fragment(&fragment, varlist, fragment_file);
                         free(fragment.id);
                     }
