@@ -105,7 +105,18 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
     // fragment is printed using 1-based coordinate system instead of 0-based since this is encoded in HapCUT
 
     fragment->blocks = 1;
-    for (i = 0; i < fragment->variants - 1; i++) {
+
+//    if bnd and not print,
+    int start_idx = 0;
+    if (fragment->alist[0].is_bnd) {
+        if (!fragment->is_all_m) {
+            if (fragment->variants - 1 < 2 && DATA_TYPE != 2) return 0;
+            start_idx = 1;
+        }
+    }
+
+
+    for (i = start_idx; i < fragment->variants - 1; i++) {
         if (fragment->alist[i + 1].varid - fragment->alist[i].varid != 1) fragment->blocks++;
     }
     fprintf(outfile, "%d %s", fragment->blocks,fragment->id);
@@ -122,10 +133,9 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
 
     //for (i=0;i<fragment->variants;i++) fprintf(stdout,"%c",fragment->alist[i].qv);
     // varid is printed with offset of 1 rather than 0 since that is encoded in the Hapcut program
-    
+    start_idx = 1;
     if (PRINT_COMPACT ==1)
-	{
-        int start_idx = 1;
+    {
         if (fragment->alist[0].is_bnd) {
             if (fragment->is_all_m) {
                 fprintf(outfile, " %d %c", fragment->alist[0].varid + 1, fragment->alist[0].allele);
@@ -159,7 +169,7 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
             fprintf(outfile, "%c", fragment->alist[i].qv);
         }
         fprintf(outfile, " ");
-	    fprintf(outfile, "%d", fragment->read_qual);
+        fprintf(outfile, "%d", fragment->read_qual);
         if (DATA_TYPE == 2)
         {
             if (fragment->rescued != 0 && fragment->rescued != 1)
@@ -168,10 +178,10 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
         }
     }
     else // individual variant format, for debugging
-	{
-    	    //fprintf(outfile,":%c",fragment->strand);
-	    for (i = 0; i < fragment->variants; i++) fprintf(outfile, " %d:%c:%d",fragment->alist[i].varid+1,fragment->alist[i].allele,(char)fragment->alist[i].qv-33);
-	}
+    {
+        //fprintf(outfile,":%c",fragment->strand);
+        for (i = 0; i < fragment->variants; i++) fprintf(outfile, " %d:%c:%d",fragment->alist[i].varid+1,fragment->alist[i].allele,(char)fragment->alist[i].qv-33);
+    }
     if (fragment->bnd_reads) {
         fprintf(outfile, " SV");
     }
@@ -200,39 +210,39 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
             f2_size--;
     }
 //    if (VCF_PHASED) {
-        FRAGMENT* f = (FRAGMENT*)malloc(sizeof(FRAGMENT));
-        f->id = (char*) malloc(strlen(f1->id) + 4);
-        if (DATA_TYPE == 2) {
-            f->barcode = (char*) malloc(strlen(f1->barcode) + 1);
-            strcpy(f->barcode, f1->barcode);
-        }
-        f->read_qual = (f1->read_qual + f2->read_qual) / 2;
-        strcpy(f->id, f1->id);
-        strcat(f->id,"_MP");
-        if (strcmp(f1->id, "D00360:94:H2YT5BCXX:1:1109:5815:14301") == 0) {
-            int tmp = 33;
-        }
-        f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size + 1));
-        f->variants = f1->variants + f2_size;
-        for (i = 0; i < f1->variants; i++) {
-            f->alist[i] = f1->alist[i];
-        }
-        int pos = 0 ;
-        for (i = 0; i < f2->variants; i++) {
-            bool ee = false;
-            for (j = 0; j < f1->variants; j++) {
-                if (f1->alist[j].varid == f2->alist[i].varid) {
-                    ee = true;
-                    break;
-                }
-            }
-            if (!ee) {
-                f->alist[pos+f1->variants] = f2->alist[i];
-                pos++;
+    FRAGMENT* f = (FRAGMENT*)malloc(sizeof(FRAGMENT));
+    f->id = (char*) malloc(strlen(f1->id) + 4);
+    if (DATA_TYPE == 2) {
+        f->barcode = (char*) malloc(strlen(f1->barcode) + 1);
+        strcpy(f->barcode, f1->barcode);
+    }
+    f->read_qual = (f1->read_qual + f2->read_qual) / 2;
+    strcpy(f->id, f1->id);
+    strcat(f->id,"_MP");
+    if (strcmp(f1->id, "D00360:94:H2YT5BCXX:1:1109:5815:14301") == 0) {
+        int tmp = 33;
+    }
+    f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size + 1));
+    f->variants = f1->variants + f2_size;
+    for (i = 0; i < f1->variants; i++) {
+        f->alist[i] = f1->alist[i];
+    }
+    int pos = 0 ;
+    for (i = 0; i < f2->variants; i++) {
+        bool ee = false;
+        for (j = 0; j < f1->variants; j++) {
+            if (f1->alist[j].varid == f2->alist[i].varid) {
+                ee = true;
+                break;
             }
         }
-        f->bnd_reads = f1->bnd_reads;
-        f->is_all_m = f1->is_all_m && f2->is_all_m && !f1->bnd_reads && !f2->bnd_reads;
+        if (!ee) {
+            f->alist[pos+f1->variants] = f2->alist[i];
+            pos++;
+        }
+    }
+    f->bnd_reads = f1->bnd_reads;
+    f->is_all_m = f1->is_all_m && f2->is_all_m && !f1->bnd_reads && !f2->bnd_reads;
     print_fragment(f, varlist,outfile);
     free(f);
 //        int is_print = filter_by_phasing_info(f, varlist);
@@ -425,7 +435,7 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                         fragment.id = (char*) malloc(sl + 1);
                         for (j = 0; j < sl; j++) fragment.id[j] = flist[i].id[j];
                         fragment.id[j] = '\0';
-						fragment.read_qual = flist[i].read_qual;
+                        fragment.read_qual = flist[i].read_qual;
                         if (flist[i].barcode == NULL){
                             fragment.barcode = NULL;
                         }else{
