@@ -89,7 +89,7 @@ int filter_ref_bnd(FRAGMENT* fragment) {
         tmp_alleles->is_bnd = fragment->alist[i].is_bnd;
     }
     fragment->variants = 0;
-    for (int i = 0; i < fragment->variants;i++) {
+    for (int i = 0; i < count;i++) {
         if (fragment->alist[i].is_bnd) {
             if (!fragment->is_all_m) {
                 continue;
