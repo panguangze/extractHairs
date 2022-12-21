@@ -79,7 +79,32 @@ int compare_alleles(const void *a, const void *b) {
     else return ((allele*) a)->varid - ((allele*) b)->varid;
 }
 
+int filter_ref_bnd(FRAGMENT* fragment) {
+    int count = fragment->variants;
+    allele* tmp_alleles = (allele*) malloc(sizeof (allele)*fragment->variants+10);
+    for (int i = 0; i < fragment->variants;i++) {
+        tmp_alleles->varid = fragment->alist[i].varid;
+        tmp_alleles->allele= fragment->alist[i].allele;
+        tmp_alleles->qv = fragment->alist[i].qv;
+        tmp_alleles->is_bnd = fragment->alist[i].is_bnd;
+    }
+    fragment->variants = 0;
+    for (int i = 0; i < fragment->variants;i++) {
+        if (fragment->alist[i].is_bnd) {
+            if (!fragment->is_all_m) {
+                continue;
+            }
+        }
+        fragment->alist[i].varid = tmp_alleles->varid;
+        fragment->alist[i].allele = tmp_alleles->allele;
+        fragment->alist[i].qv = tmp_alleles->qv;
+        fragment->alist[i].is_bnd = tmp_alleles->is_bnd;
+        fragment->variants++;
+    }
+}
+
 int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
+    filter_ref_bnd(fragment);
     if (fragment->is_all_m) {
         auto tmmpp = 333;
     }
