@@ -83,10 +83,10 @@ int filter_ref_bnd(FRAGMENT* fragment) {
     int count = fragment->variants;
     allele* tmp_alleles = (allele*) malloc(sizeof (allele)*fragment->variants+10);
     for (int i = 0; i < fragment->variants;i++) {
-        tmp_alleles->varid = fragment->alist[i].varid;
-        tmp_alleles->allele= fragment->alist[i].allele;
-        tmp_alleles->qv = fragment->alist[i].qv;
-        tmp_alleles->is_bnd = fragment->alist[i].is_bnd;
+        tmp_alleles[i].varid = fragment->alist[i].varid;
+        tmp_alleles[i].allele= fragment->alist[i].allele;
+        tmp_alleles[i].qv = fragment->alist[i].qv;
+        tmp_alleles[i].is_bnd = fragment->alist[i].is_bnd;
     }
     fragment->variants = 0;
     for (int i = 0; i < count;i++) {
@@ -95,19 +95,20 @@ int filter_ref_bnd(FRAGMENT* fragment) {
                 continue;
             }
         }
-        fragment->alist[i].varid = tmp_alleles->varid;
-        fragment->alist[i].allele = tmp_alleles->allele;
-        fragment->alist[i].qv = tmp_alleles->qv;
-        fragment->alist[i].is_bnd = tmp_alleles->is_bnd;
+        fragment->alist[i].varid = tmp_alleles[i].varid;
+        fragment->alist[i].allele = tmp_alleles[i].allele;
+        fragment->alist[i].qv = tmp_alleles[i].qv;
+        fragment->alist[i].is_bnd = tmp_alleles[i].is_bnd;
         fragment->variants++;
     }
 }
 
 int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
-    filter_ref_bnd(fragment);
-    if (fragment->is_all_m) {
-        auto tmmpp = 333;
+    if (strcmp(fragment->id, "SRR5114981.518061_MP") == 0){
+        auto tmpp = 33;
     }
+    filter_ref_bnd(fragment);
+
     if (fragment->variants < 2 && DATA_TYPE != 2) return 0;
     if (strcmp(fragment->id, "D00360:95:H2YWMBCXX:2:2214:11806:83148") == 0) {
         int tmp = 33;
@@ -132,16 +133,9 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
     fragment->blocks = 1;
 
 //    if bnd and not print,
-    int start_idx = 0;
-    if (fragment->alist[0].is_bnd) {
-        if (!fragment->is_all_m) {
-            if (fragment->variants - 1 < 2 && DATA_TYPE != 2) return 0;
-            start_idx = 1;
-        }
-    }
 
 
-    for (i = start_idx; i < fragment->variants - 1; i++) {
+    for (i = 0; i < fragment->variants - 1; i++) {
         if (fragment->alist[i + 1].varid - fragment->alist[i].varid != 1) fragment->blocks++;
     }
     fprintf(outfile, "%d %s", fragment->blocks,fragment->id);
@@ -158,39 +152,16 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
 
     //for (i=0;i<fragment->variants;i++) fprintf(stdout,"%c",fragment->alist[i].qv);
     // varid is printed with offset of 1 rather than 0 since that is encoded in the Hapcut program
-    start_idx = 1;
     if (PRINT_COMPACT ==1)
     {
-        if (fragment->alist[0].is_bnd) {
-            if (fragment->is_all_m) {
-                fprintf(outfile, " %d %c", fragment->alist[0].varid + 1, fragment->alist[0].allele);
-            } else {
-                fprintf(outfile, " %d %c", fragment->alist[1].varid + 1, fragment->alist[1].allele);
-                start_idx = 2;
-            }
-        } else {
-            fprintf(outfile, " %d %c", fragment->alist[0].varid + 1, fragment->alist[0].allele);
-        }
 
-//        fprintf(outfile, " %d %c", fragment->alist[0].varid + 1, fragment->alist[0].allele);
-        for (i = start_idx; i < fragment->variants; i++) {
-            if (fragment->alist[i].is_bnd) {
-                if (!fragment->is_all_m) {
-                    continue;
-                } else {
-                    auto tmmp = 3;
-                }
-            }
+        fprintf(outfile, " %d %c", fragment->alist[0].varid + 1, fragment->alist[0].allele);
+        for (i = 1; i < fragment->variants; i++) {
             if (fragment->alist[i].varid - fragment->alist[i - 1].varid == 1) fprintf(outfile, "%c", fragment->alist[i].allele);
             else fprintf(outfile, " %d %c", fragment->alist[i].varid + 1, fragment->alist[i].allele);
         }
         fprintf(outfile, " ");
-        for (i = start_idx - 1; i < fragment->variants; i++) {
-            if (fragment->alist[i].is_bnd) {
-                if (!fragment->is_all_m) {
-                    continue;
-                }
-            }
+        for (i = 0; i < fragment->variants; i++) {
             fprintf(outfile, "%c", fragment->alist[i].qv);
         }
         fprintf(outfile, " ");
