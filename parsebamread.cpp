@@ -260,12 +260,12 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
     if (ss < 0 || ss >= VARIANTS) return 0;
 
     // check if ss is less than first variant for the chromosome 'chrom', if so assign it to the first variant
-    if (ss < chromvars[chrom].first) ss = chromvars[chrom].first;   
+    if (ss < chromvars[chrom].first) ss = chromvars[chrom].first;
 
     if (varlist[ss].position <= end) {
         while (ss < VARIANTS && varlist[ss].position < start && ss <= chromvars[chrom].last) ss++;  //locate the first variant on reads
-        firstvar = ss;      
-        while (ss < VARIANTS && varlist[ss].position <= end && ss <= chromvars[chrom].last) {       //locate the last variant on reads 
+        firstvar = ss;
+        while (ss < VARIANTS && varlist[ss].position <= end && ss <= chromvars[chrom].last) {       //locate the last variant on reads
             //printf("variant %s %d %c %c \n",varlist[ss].chrom,varlist[ss].position,varlist[ss].allele1,varlist[ss].allele2);
             ov++;
             ss++;
@@ -300,13 +300,13 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
                     bnd_ss = ss;
                 }
                 // function call
-                if (varlist[ss].heterozygous == '1' && varlist[ss].type == 0 && varlist[ss].bnd == 0) 
+                if (varlist[ss].heterozygous == '1' && varlist[ss].type == 0 && varlist[ss].bnd == 0)
                     compare_read_SNP(read, varlist, ss, start, l1, l2, fragment);
                 else if (varlist[ss].heterozygous == '2' && varlist[ss].type == 0 && varlist[ss].bnd == 0) {
                     compare_read_SNP(read, varlist, ss, start, l1, l2, fragment);
                 } else if (varlist[ss].heterozygous == '1' && varlist[ss].type != 0 && varlist[ss].position < start + l2 + ol - 1 && reflist->current >= 0 && PARSEINDELS == 1 && varlist[ss].bnd == 0) {
                     compare_read_INDEL(read, varlist, ss, start, l1, l2, ol, fragment, i, reflist);
-                } 
+                }
                 ss++;
             }
 
@@ -404,7 +404,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
 //                    varlist[ss].depth++;
 //                    if ((read->flag & 16) == 16) varlist[ss].A2 += 1 << 16;
 //                    else varlist[ss].A2 += 1;
-                    ss++; 
+                    ss++;
                 }
             } else {
                 if (varlist[ss].heterozygous == '1' && varlist[ss].position == start + l2 && varlist[ss].bnd == 1 && ss <= chromvars[chrom].last)
@@ -424,10 +424,10 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
     }
 
 if (SUPPORT_READS_TAG == nullptr && PARSEBND && DATA_TYPE == 1)
-{//this works for het SV BND only 
+{//this works for het SV BND only
 
     // start - 300
-    //TODO: add direction check 
+    //TODO: add direction check
     if (read->IS > MAX_IS) {
         support_ref_bnd_reads = false;
 
@@ -455,7 +455,7 @@ if (SUPPORT_READS_TAG == nullptr && PARSEBND && DATA_TYPE == 1)
                 sss--;
             }
         }
-    //TODO: add direction check 
+    //TODO: add direction check
     //end + 300
         if (read->IS > MAX_IS) {
             support_ref_bnd_reads = false;
@@ -485,6 +485,9 @@ if (SUPPORT_READS_TAG == nullptr && PARSEBND && DATA_TYPE == 1)
         }
     }
 //if
+if (read->IS > MAX_IS) {
+    support_ref_bnd_reads = false;
+}
 if (PARSEBND && support_ref_bnd_reads) {
     for (auto cbnd_ss : bnd_sses) {
         fragment->alist[fragment->variants].varid = cbnd_ss;
