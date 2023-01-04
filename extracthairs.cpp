@@ -172,6 +172,19 @@ void check_input_0_or_1(char* x){
 // extract haplotype informative reads from sorted bam file //
 // need to discard reads that are marked as duplicates using flag //
 
+
+bool find_reads_from_support_reads(alignedread* read) {
+    auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
+    if (is_found) return true;
+    std::string s1 = read->chrom;
+    std::string s2 = std::to_string(read->position - 1);
+    std::string s3 = read->matechrom;
+    std::string s4 = std::to_string(read->mateposition - 1);
+    auto span_format = "SPAN_"+s1+"_" + s2+"_" + s3+"_" + s4;
+    is_found = SUPPORT_READS.find(span_format) != SUPPORT_READS.end();
+    return is_found;
+}
+
 int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, REFLIST* reflist) {
     fprintf(stderr, "reading sorted bamfile %s \n", bamfile);
     int reads = 0;
@@ -239,7 +252,8 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
             if (sam_read1(fp,header,b) < 0) break;
         }
         fetch_func(b, fp, header, read);
-        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
+//        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
+        auto is_found = find_reads_from_support_reads(read);
         if ((!is_found && (read->mquality < MIN_MQ || SV_AD == 1 || (read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)))) || (read->flag & 256) == 256) {
 //            reads += 1;
 //            prevchrom = chrom;

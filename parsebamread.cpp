@@ -485,7 +485,7 @@ if (SUPPORT_READS_TAG == nullptr && PARSEBND && DATA_TYPE == 1)
         }
     }
 //if
-if (read->IS > MAX_IS) {
+if (300 >read->IS || read->IS > 400) {
     support_ref_bnd_reads = false;
 }
 if (PARSEBND && support_ref_bnd_reads) {
