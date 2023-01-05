@@ -22,7 +22,7 @@ extern int PARSEINDELS;
 extern int* fcigarlist;
 extern int SUM_ALL_ALIGN;
 extern int HOMOZYGOUS;
-extern std::map<std::string, int> SUPPORT_READS;
+extern std::unordered_map<std::string, int> SUPPORT_READS;
 
 
  // max number of SNVs in a short haplotype

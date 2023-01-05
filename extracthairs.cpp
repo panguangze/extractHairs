@@ -86,7 +86,7 @@ int PRINT_COMPACT = 1; // 1= print each fragment block by block, 0 = print varia
 std::vector<std::string> INPUT_CONTIGS;
 std::string INPUT_CONTIGS_STR;
 //int get_chrom_name(struct alignedread* read,HASHTABLE* ht,REFLIST* reflist);
-std::map<std::string, int> SUPPORT_READS;
+std::unordered_map<std::string, int> SUPPORT_READS;
 char* SUPPORT_READS_TAG;
 int SV_AD;
 

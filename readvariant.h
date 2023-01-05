@@ -44,7 +44,7 @@ extern int BND_RANGE;
 extern int BLAST_REGION_LEN;
 extern int SAMPLE_IDX;
 
-extern std::map<std::string, int> SUPPORT_READS;
+extern std::unordered_map<std::string, int> SUPPORT_READS;
 
 typedef struct {
     char* id;           //variant id
