@@ -89,17 +89,20 @@ int filter_ref_bnd(FRAGMENT* fragment) {
         tmp_alleles[i].is_bnd = fragment->alist[i].is_bnd;
     }
     fragment->variants = 0;
-    for (int i = 0; i < count;i++) {
-        if (fragment->alist[i].is_bnd) {
+    int j = 0;
+    int k  = 0;
+    for (volatile int k = 0; k < count;k++) {
+        if (tmp_alleles[k].is_bnd) {
             if (!fragment->is_all_m) {
                 continue;
             }
         }
-        fragment->alist[i].varid = tmp_alleles[i].varid;
-        fragment->alist[i].allele = tmp_alleles[i].allele;
-        fragment->alist[i].qv = tmp_alleles[i].qv;
-        fragment->alist[i].is_bnd = tmp_alleles[i].is_bnd;
+        fragment->alist[j].varid = tmp_alleles[k].varid;
+        fragment->alist[j].allele = tmp_alleles[k].allele;
+        fragment->alist[j].qv = tmp_alleles[k].qv;
+        fragment->alist[j].is_bnd = tmp_alleles[k].is_bnd;
         fragment->variants++;
+        j++;
     }
 }
 

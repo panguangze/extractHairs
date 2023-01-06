@@ -178,9 +178,12 @@ bool find_reads_from_support_reads(alignedread* read) {
     if (is_found) return true;
     std::string s1 = read->chrom;
     std::string s2 = std::to_string(read->position - 1);
+    if (read->matechrom == nullptr){
+        return is_found;
+    }
     std::string s3 = read->matechrom;
     std::string s4 = std::to_string(read->mateposition - 1);
-    auto span_format = "SPAN_"+s1+"_" + s2+"_" + s3+"_" + s4;
+    std::string span_format = "SPAN_"+s1+"_" + s2+"_" + s3+"_" + s4;
     is_found = SUPPORT_READS.find(span_format) != SUPPORT_READS.end();
     return is_found;
 }
