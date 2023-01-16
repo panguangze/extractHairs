@@ -241,6 +241,9 @@ int parse_bamfile_fosmid(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     }
     bam1_t *b = bam_init1();
     bam_hdr_t *header = sam_hdr_read(fp);
+    int* prev_bnd_pos = nullptr;
+    int zero = 0;
+    prev_bnd_pos = &zero;
 
     while (sam_read1(fp, header, b) >= 0) {
         //readlist[r] = calloc(1,sizeof(struct alignedread));
@@ -277,7 +280,8 @@ int parse_bamfile_fosmid(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         } else chrom = prevchrom;
 
         fragment.variants = 0; //fragment.id = readlist[r]->readid;
-        if (chrom >= 0) extract_variants_read(readlist[r], ht, chromvars, varlist, 1, &fragment, chrom, reflist);
+        if (chrom >= 0) extract_variants_read(readlist[r], ht, chromvars, varlist, 1, &fragment, chrom, reflist, prev_bnd_pos,
+                                              true);
         if (fragment.variants > 0) {
             add_fragment(flist, &fragment, readlist[r], fragments);
             readlist[r]->findex = fragments++;

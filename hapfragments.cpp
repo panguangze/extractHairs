@@ -340,6 +340,46 @@ int print_mate_bnd_fragment(std::unordered_map<std::string , std::pair<int, int>
     return 1;
 }
 
+int print_dup_region_snp(VARIANT* variant, FILE* outfile, int idx){
+    auto v = variant[idx];
+    if (v.bnd_type != BND_DUP)return 0;
+    int diff = 0;
+    int minv = 0;
+    int snp1 = 0;
+    for(auto item : *(v.snp0_dup_region)) {
+        snp1 = (*(v.snp1_dup_region))[item.first];
+        diff = abs(item.second - (*(v.snp1_dup_region))[item.first]);
+        minv = std::min(item.second,snp1);
+        if (diff >= ((minv * 3) / 4)) {
+            if (item.second > snp1) {
+                if (NEW_FORMAT) {
+                    for (int i = 0; i < 3; i++){
+                        fprintf(outfile, "2 BND 2 NNNNNNNNNNNN-1 -1 %d 1 %d 0 ID 60 0 0.31",idx + 1, item.first + 1);
+                        fprintf(outfile,"\n");
+                    }
+                } else {
+                    for (int i = 0; i < 3; i++){
+                        fprintf(outfile, "2 BND %d 1 %d 0 77A 60",idx + 1, item.first + 1);
+                        fprintf(outfile,"\n");
+                    }
+                }
+            } else {
+                if (NEW_FORMAT) {
+                    for (int i = 0; i < 3; i++){
+                        fprintf(outfile, "2 BND 2 NNNNNNNNNNNN-1 -1 %d 1 %d 1 ID 60 0 0.31",idx + 1, item.first + 1);
+                        fprintf(outfile,"\n");
+                    }
+                } else {
+                    for (int i = 0; i < 3; i++){
+                        fprintf(outfile, "2 BND %d 1 %d 1 77A 60",idx + 1, item.first + 1);
+                        fprintf(outfile,"\n");
+                    }
+                }
+            }
+        }
+    }
+}
+
 // sort the fragment list by 'mate-position or position of 2nd read' so that reads that are from the same DNA fragment are together
 // also takes care of overlapping paired-end reads to avoid duplicates in fragments
 void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int currchrom, int currpos, int prevchrom) {

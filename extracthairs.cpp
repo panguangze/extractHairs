@@ -250,6 +250,8 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 
 
 //    }
+    int zero = 0;
+    int * prev_bnd_pos  = &zero;
 
     while (true) {
         if (iter != nullptr) {
@@ -349,7 +351,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 if (REALIGN_VARIANTS) {
                     realign_and_extract_variants_read(read, ht, chromvars, varlist, 0, &fragment, chrom, reflist);
                 } else {
-                    extract_variants_read(read, ht, chromvars, varlist, 0, &fragment, chrom, reflist);
+                    extract_variants_read(read, ht, chromvars, varlist, 0, &fragment, chrom, reflist, prev_bnd_pos, is_found);
                 }
                 if (fragment.variants >= 2) VOfragments[0]++;
                 else if (fragment.variants >= 1) VOfragments[1]++;
@@ -379,7 +381,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
                 else varlist[pos].A2 += 1;
             }
-            if (chrom >= 0) extract_variants_read(read, ht, chromvars, varlist, 1, &fragment, chrom, reflist);
+            if (chrom >= 0) extract_variants_read(read, ht, chromvars, varlist, 1, &fragment, chrom, reflist,prev_bnd_pos, is_found);
 
             //fprintf(stderr,"paired read stats %s %d flag %d IS %d\n",read->chrom,read->cigs,read->flag,read->IS);
             if (fragment.variants > 0) {
@@ -682,8 +684,7 @@ int main(int argc, char** argv) {
     }
 //        free(&BNDs);
 
-    if (logfile != NULL) fclose(logfile);
-    if (fragment_file != NULL && fragment_file != stdout) fclose(fragment_file);
+
 
     for (i=0;i<reflist->ns;i++){
 		free(reflist->names[i]);
@@ -704,7 +705,10 @@ int main(int argc, char** argv) {
         if (varlist[i].heterozygous == '1'){
             free(varlist[i].allele1); free(varlist[i].allele2);
         }
-	}
+        print_dup_region_snp(varlist,fragment_file,i);
+        if (varlist->snp0_dup_region != nullptr) free(varlist->snp0_dup_region);
+        if (varlist->snp1_dup_region != nullptr) free(varlist->snp1_dup_region);
+    }
 
 	for (i=0;i<chromosomes;i++){
 		free(chromvars[i].intervalmap);
@@ -716,6 +720,8 @@ int main(int argc, char** argv) {
 			free(bamfilelist[i]);
 		free(bamfilelist);
 	}
+    if (logfile != NULL) fclose(logfile);
+    if (fragment_file != NULL && fragment_file != stdout) fclose(fragment_file);
 
     return 0;
 }

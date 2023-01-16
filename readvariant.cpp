@@ -146,13 +146,25 @@ int parse_bnd(VARIANT *variant, int chromosome)
     if (strcmp(variant->AA, "<INV>") == 0) { //for TODO, if have insertion seq, distance = svlen
         variant->bnd_type = BND_INV;
         variant->bnd_mate_chrom = variant->chrom;
-        variant->bnd_mate_pos = variant->position + 1;
-        variant->bnd_pair_distance = 200;
+        free(bnd_str);
+        return 0;
+    }
+    else if (strcmp(variant->AA, "<DEL>") == 0) { //for TODO, if have insertion seq, distance = svlen
+        variant->bnd_type = BND_DEL;
+        variant->bnd_mate_chrom = variant->chrom;
+        free(bnd_str);
+        return 0;
+    }
+    else if (strcmp(variant->AA, "<DUP>") == 0) { //for TODO, if have insertion seq, distance = svlen
+        variant->bnd_type = BND_DUP;
+        variant->bnd_mate_chrom = variant->chrom;
+        variant->snp0_dup_region = new std::map<int, int>();
+        variant->snp1_dup_region = new std::map<int, int>();
         free(bnd_str);
         return 0;
     }
 
-    if (strchr(ori_bnd_str, '[') != NULL)
+    else if (strchr(ori_bnd_str, '[') != NULL)
     {
         if (ori_bnd_str[0] == '[')
         {
@@ -179,11 +191,7 @@ int parse_bnd(VARIANT *variant, int chromosome)
             variant->bnd_mate_chrom = strtok(NULL, "][:");
             variant->bnd_mate_pos = atoi(strtok(NULL, "][:"));
         }
-    }
-
-
-
-    else {
+    }else {
         //single breakend
         variant->bnd_type = BNDTYPE_SINGLE_END;
         variant->bnd_pair_distance = -1;
@@ -296,7 +304,8 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
         int m = 2;
     }
     if (ninfo < 0) {
-        int *svlen = 0;
+        int *svlen = nullptr;
+        ninfo_arr = 0;
         ninfo = bcf_get_info_int32(header, record, "SVLEN", &svlen, &ninfo_arr);
         if (ninfo < 0)
             variant->bnd = 0;
@@ -404,6 +413,11 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                             SUPPORT_READS.emplace(substr, variant_ss);
                         }
                     }
+                    int *mate_pos = nullptr;
+                    ninfo_arr = 0;
+                    ninfo = bcf_get_info_int32(header, record, "END", &mate_pos, &ninfo_arr);
+                    variant->bnd_pos = variant->position;
+                    variant->bnd_mate_pos = *mate_pos;
                     parse_bnd(variant, chromosome);
                     free(support_reads);
 //                    free(support_reads_info_arr);

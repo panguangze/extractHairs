@@ -34,6 +34,7 @@ extern char* SUPPORT_READS_TAG;
 #define BND_INS 4
 #define BND_INV 5
 #define BND_DEL 6
+#define BND_DUP 7
 
 #define BNDDIRECT_TRP 0
 #define BNDDIRECT_TLP 1 
@@ -76,7 +77,8 @@ typedef struct {
     char * bnd_mate_chrom;
     char* bnd_seq; // sequence around bnd site
     char* ref_seq;
-    
+    std::map<int, int> *snp0_dup_region;
+    std::map<int, int> *snp1_dup_region;
     // total reads covering this variant (haploid/diploid, A1-> reads supporting reference allele (single-read)
     //	float L11,L12,L22; // genotype likelihoods for three possible genotypes
     int phase_set; // phase_set for phased vcf

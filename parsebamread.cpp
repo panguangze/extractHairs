@@ -236,6 +236,30 @@ std::map<int, float> parse_freq(std::string freq_file){
     return result;
 }
 
+int reads_in_sv_region(VARIANT* varlist, int* prev_bnd_pos, alignedread* read){
+    char* chrom = read->chrom; int start = read->position, end = read->position + read->span;
+    auto v = varlist[*prev_bnd_pos];
+    if (((start > v.bnd_pos && start < v.bnd_mate_pos) || (end  < v.bnd_mate_pos && end > v.bnd_pos)) && strcmp(v.chrom, chrom) == 0 && v.bnd_mate_pos != 0) {
+        if (v.bnd_type == BND_DEL) {
+            return  1;
+        } else if (v.bnd_type == BND_INV) {
+            if (abs(read->IS) >= 300 and abs(read->IS) <= 400) {
+                return 1;
+            }
+        } else if (v.bnd_type == BND_DUP) {
+            return 2;
+        }
+//        return v.bnd_type;
+    }
+    return -1;
+
+//    if (((start > v.bnd_pos && start < v.bnd_mate_pos) || (end  < v.bnd_mate_pos && end > v.bnd_pos)) && strcmp(v.chrom, chrom) == 0 && v.bnd_mate_pos != 0) {
+//        return v.bnd_type;
+//    } else{
+//        return -1;
+//    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // this function needs some additional checks july 18 2012
@@ -244,11 +268,11 @@ std::map<int, float> parse_freq(std::string freq_file){
 // TODO: if SV is 0/1, we only connect the bnd with snp. caution: the direction matters 
 // TODO: test for spanning read, i.e. split alignment: 1) we dont need to consider the BND direction for them 2) notice that the bnd is covered through hardclip/softclip. 3) notice that the bnd alignment is not exactly matching
 // TODO: test for discordant support reads, i.e. abnormal insertion size. 1) need to consider the direction? 2) need to use the pair-ended info to locate breake-end
-int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, int paired, FRAGMENT* fragment, int chrom, REFLIST* reflist) {
-    if (strcmp(read->readid,"SRR5114979.258584167") == 0){
+int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, int paired, FRAGMENT* fragment, int chrom, REFLIST* reflist, int * prev_bnd_pos, bool is_found) {
+    if (strcmp(read->readid,"chr14_1_19958874_19959206_0:0:0_0:0:0_16e301") == 0){
         auto tmppp = 3;
     }
-    std::vector<int> bnd_sses; // reads cover bnds
+    std::set<int> bnd_sses; // reads cover bnds
     int start = read->position;
     int end = start + read->span;
     int ss = 0, firstvar = 0, j = 0, ov = 0, i = 0;     // ss -> variant id; j -> hash index, ov -> no of variants covered by the reads
@@ -280,8 +304,12 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
     int l1 = 0, l2 = 0; // l1 is advance on read, l2 is advance on reference genome
     int op = 0, ol = 0; // op == operation; ol == operation length
     bool support_ref_bnd_reads = false;
-    int bnd_ss = 0;
-
+//    if pos in bnd region
+    auto region_tag = reads_in_sv_region(varlist, prev_bnd_pos, read);
+    if(region_tag == 1 and !is_found) {
+        support_ref_bnd_reads = true;
+        bnd_sses.insert(*prev_bnd_pos);
+    }
     ss = firstvar;
     for (i = 0; i < read->cigs; i++) {          //iter through base with CIGAR
         //fprintf(stdout,"%c %d \t",(char)read->cigarlist[i+1],read->cigarlist[i]);
@@ -295,9 +323,9 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
         if (op == BAM_CMATCH) {
             while (ss <= chromvars[chrom].last && varlist[ss].position >= start + l2 && varlist[ss].position < start + l2 + ol) {
                 if(varlist[ss].bnd == 1) {
-                    bnd_sses.push_back(ss);
+                    bnd_sses.insert(ss);
                     support_ref_bnd_reads = true;
-                    bnd_ss = ss;
+                    *prev_bnd_pos = ss;
                 }
                 // function call
                 if (varlist[ss].heterozygous == '1' && varlist[ss].type == 0 && varlist[ss].bnd == 0)
@@ -326,7 +354,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
                 else varlist[ss].A2 += 1;
                 ss++;
             } else if(varlist[ss].bnd == 1) {
-                bnd_ss = ss;
+                *prev_bnd_pos = ss;
                 ss++;
             }
             l1 += ol;
@@ -345,7 +373,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
                 ss++;
             } else if(varlist[ss].bnd == 1) {
 //                support_ref_bnd_reads = true;
-                bnd_ss = ss;
+                *prev_bnd_pos = ss;
                 ss++;
             }
             l2 += ol;
@@ -485,9 +513,31 @@ if (SUPPORT_READS_TAG == nullptr && PARSEBND && DATA_TYPE == 1)
         }
     }
 //if
-if (300 >read->IS || read->IS > 400) {
+if (300 > abs(read->IS) || abs(read->IS) > 400) {
     support_ref_bnd_reads = false;
 }
+
+if (region_tag == 2) {
+    for (int k = 0; k < fragment->variants; k++) {
+        if (fragment->alist[k].allele == '0') {
+            if (varlist[*prev_bnd_pos].snp0_dup_region->find(fragment->alist[k].varid) != varlist[*prev_bnd_pos].snp0_dup_region->end()) {
+                (*(varlist[*prev_bnd_pos].snp0_dup_region))[fragment->alist[k].varid] = (*(varlist[*prev_bnd_pos].snp0_dup_region))[fragment->alist[k].varid] + 1;
+            } else {
+                (*(varlist[*prev_bnd_pos].snp0_dup_region))[fragment->alist[k].varid] = 1;
+                (*(varlist[*prev_bnd_pos].snp1_dup_region))[fragment->alist[k].varid] = 0;
+            }
+        } else {
+            if (varlist[*prev_bnd_pos].snp1_dup_region->find(fragment->alist[k].varid) != varlist[*prev_bnd_pos].snp1_dup_region->end()) {
+                (*(varlist[*prev_bnd_pos].snp1_dup_region))[fragment->alist[k].varid] = (*(varlist[*prev_bnd_pos].snp1_dup_region))[fragment->alist[k].varid] + 1;
+            } else {
+
+                (*(varlist[*prev_bnd_pos].snp1_dup_region))[fragment->alist[k].varid] = 1;
+                (*(varlist[*prev_bnd_pos].snp0_dup_region))[fragment->alist[k].varid] = 0;
+            }
+        }
+    }
+}
+
 if (PARSEBND && support_ref_bnd_reads) {
     for (auto cbnd_ss : bnd_sses) {
         fragment->alist[fragment->variants].varid = cbnd_ss;
@@ -502,13 +552,13 @@ if (PARSEBND && support_ref_bnd_reads) {
 }
 //if(PARSEBND && SUPPORT_READS_TAG == nullptr) {
 //    if(support_ref_bnd_reads) {
-//        fragment->alist[fragment->variants].varid = bnd_ss;
+//        fragment->alist[fragment->variants].varid = prev_bnd_pos;
 //        fragment->alist[fragment->variants].allele = '0';
 //        fragment->alist[fragment->variants ].qv = read->quality[l1];
 //        fragment->variants++;
-//        varlist[bnd_ss].depth++;
-//        if ((read->flag & 16) == 16) varlist[bnd_ss].A2 += 1 << 16;
-//        else varlist[bnd_ss].A2 += 1;
+//        varlist[prev_bnd_pos].depth++;
+//        if ((read->flag & 16) == 16) varlist[prev_bnd_pos].A2 += 1 << 16;
+//        else varlist[prev_bnd_pos].A2 += 1;
 //    }
 //}
      return 0;

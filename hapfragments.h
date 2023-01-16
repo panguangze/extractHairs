@@ -53,6 +53,7 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile);
 
 // add mate bnd connection
 int print_mate_bnd_fragment(std::unordered_map<std::string , std::pair<int, int>>& BNDs, FILE* outfile);
+int print_dup_region_snp(VARIANT* variant,FILE* outfile, int idx);
 void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int currchrom, int currpos, int prevchrom);
 
 void sort_framgment(FRAGMENT* fragment);
