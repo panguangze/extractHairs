@@ -269,7 +269,7 @@ int reads_in_sv_region(VARIANT* varlist, int* prev_bnd_pos, alignedread* read){
 // TODO: test for spanning read, i.e. split alignment: 1) we dont need to consider the BND direction for them 2) notice that the bnd is covered through hardclip/softclip. 3) notice that the bnd alignment is not exactly matching
 // TODO: test for discordant support reads, i.e. abnormal insertion size. 1) need to consider the direction? 2) need to use the pair-ended info to locate breake-end
 int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, int paired, FRAGMENT* fragment, int chrom, REFLIST* reflist, int * prev_bnd_pos, bool is_found) {
-    if (strcmp(read->readid,"chr14_1_19958874_19959206_0:0:0_0:0:0_16e301") == 0){
+    if (strcmp(read->readid,"chr22_mrecom_17322629_17323109_0:0:0_0:0:0_d69c0") == 0){
         auto tmppp = 3;
     }
     std::set<int> bnd_sses; // reads cover bnds
@@ -306,10 +306,11 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
     bool support_ref_bnd_reads = false;
 //    if pos in bnd region
     auto region_tag = reads_in_sv_region(varlist, prev_bnd_pos, read);
-    if(region_tag == 1 and !is_found) {
+    int prev_dup_pos = 0;
+    if((region_tag == 1 and !is_found)) {
         support_ref_bnd_reads = true;
         bnd_sses.insert(*prev_bnd_pos);
-    }
+    } else if (region_tag == 2) prev_dup_pos = *prev_bnd_pos;
     ss = firstvar;
     for (i = 0; i < read->cigs; i++) {          //iter through base with CIGAR
         //fprintf(stdout,"%c %d \t",(char)read->cigarlist[i+1],read->cigarlist[i]);
@@ -520,19 +521,19 @@ if (300 > abs(read->IS) || abs(read->IS) > 400) {
 if (region_tag == 2) {
     for (int k = 0; k < fragment->variants; k++) {
         if (fragment->alist[k].allele == '0') {
-            if (varlist[*prev_bnd_pos].snp0_dup_region->find(fragment->alist[k].varid) != varlist[*prev_bnd_pos].snp0_dup_region->end()) {
-                (*(varlist[*prev_bnd_pos].snp0_dup_region))[fragment->alist[k].varid] = (*(varlist[*prev_bnd_pos].snp0_dup_region))[fragment->alist[k].varid] + 1;
+            if (varlist[prev_dup_pos].snp0_dup_region->find(fragment->alist[k].varid) != varlist[prev_dup_pos].snp0_dup_region->end()) {
+                (*(varlist[prev_dup_pos].snp0_dup_region))[fragment->alist[k].varid] = (*(varlist[prev_dup_pos].snp0_dup_region))[fragment->alist[k].varid] + 1;
             } else {
-                (*(varlist[*prev_bnd_pos].snp0_dup_region))[fragment->alist[k].varid] = 1;
-                (*(varlist[*prev_bnd_pos].snp1_dup_region))[fragment->alist[k].varid] = 0;
+                (*(varlist[prev_dup_pos].snp0_dup_region))[fragment->alist[k].varid] = 1;
+                (*(varlist[prev_dup_pos].snp1_dup_region))[fragment->alist[k].varid] = 0;
             }
         } else {
-            if (varlist[*prev_bnd_pos].snp1_dup_region->find(fragment->alist[k].varid) != varlist[*prev_bnd_pos].snp1_dup_region->end()) {
-                (*(varlist[*prev_bnd_pos].snp1_dup_region))[fragment->alist[k].varid] = (*(varlist[*prev_bnd_pos].snp1_dup_region))[fragment->alist[k].varid] + 1;
+            if (varlist[prev_dup_pos].snp1_dup_region->find(fragment->alist[k].varid) != varlist[prev_dup_pos].snp1_dup_region->end()) {
+                (*(varlist[prev_dup_pos].snp1_dup_region))[fragment->alist[k].varid] = (*(varlist[prev_dup_pos].snp1_dup_region))[fragment->alist[k].varid] + 1;
             } else {
 
-                (*(varlist[*prev_bnd_pos].snp1_dup_region))[fragment->alist[k].varid] = 1;
-                (*(varlist[*prev_bnd_pos].snp0_dup_region))[fragment->alist[k].varid] = 0;
+                (*(varlist[prev_dup_pos].snp1_dup_region))[fragment->alist[k].varid] = 1;
+                (*(varlist[prev_dup_pos].snp0_dup_region))[fragment->alist[k].varid] = 0;
             }
         }
     }
