@@ -176,6 +176,9 @@ void check_input_0_or_1(char* x){
 bool find_reads_from_support_reads(alignedread* read) {
     auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
     if (is_found) return true;
+    if (read->chrom == nullptr || read->matechrom == nullptr) {
+        return false;
+    }
     std::string s1 = read->chrom;
     std::string s2 = std::to_string(read->position - 1);
     if (read->matechrom == nullptr){
