@@ -239,11 +239,11 @@ std::map<int, float> parse_freq(std::string freq_file){
 int reads_in_sv_region(VARIANT* varlist, int* prev_bnd_pos, alignedread* read){
     char* chrom = read->chrom; int start = read->position, end = read->position + read->span;
     auto v = varlist[*prev_bnd_pos];
-    if (((start > v.bnd_pos && start < v.bnd_mate_pos) || (end  < v.bnd_mate_pos && end > v.bnd_pos)) && strcmp(v.chrom, chrom) == 0 && v.bnd_mate_pos != 0) {
+    if (((start > v.bnd_pos + 20 && start < v.bnd_mate_pos - 20) || (end  < v.bnd_mate_pos -20 && end > v.bnd_pos + 20)) && strcmp(v.chrom, chrom) == 0 && v.bnd_mate_pos != 0) {
         if (v.bnd_type == BND_DEL) {
             return  1;
         } else if (v.bnd_type == BND_INV) {
-            if (abs(read->IS) >= 300 and abs(read->IS) <= 400) {
+            if (abs(read->IS) >= 300 and abs(read->IS) <= 500) {
                 return 1;
             }
         } else if (v.bnd_type == BND_DUP) {
@@ -269,7 +269,7 @@ int reads_in_sv_region(VARIANT* varlist, int* prev_bnd_pos, alignedread* read){
 // TODO: test for spanning read, i.e. split alignment: 1) we dont need to consider the BND direction for them 2) notice that the bnd is covered through hardclip/softclip. 3) notice that the bnd alignment is not exactly matching
 // TODO: test for discordant support reads, i.e. abnormal insertion size. 1) need to consider the direction? 2) need to use the pair-ended info to locate breake-end
 int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, int paired, FRAGMENT* fragment, int chrom, REFLIST* reflist, int * prev_bnd_pos, bool is_found) {
-    if (strcmp(read->readid,"chr22_mrecom_17322629_17323109_0:0:0_0:0:0_d69c0") == 0){
+    if (strcmp(read->readid,"chr22_mrecom_10560865_10561181_0:0:0_0:0:0_b71a7") == 0){
         auto tmppp = 3;
     }
     std::set<int> bnd_sses; // reads cover bnds
@@ -323,7 +323,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
 
         if (op == BAM_CMATCH) {
             while (ss <= chromvars[chrom].last && varlist[ss].position >= start + l2 && varlist[ss].position < start + l2 + ol) {
-                if(varlist[ss].bnd == 1) {
+                if(varlist[ss].bnd == 1 && reads_in_sv_region(varlist, &ss, read) != -1 && varlist[ss].heterozygous == '1') {
                     bnd_sses.insert(ss);
                     support_ref_bnd_reads = true;
                     *prev_bnd_pos = ss;
@@ -514,7 +514,7 @@ if (SUPPORT_READS_TAG == nullptr && PARSEBND && DATA_TYPE == 1)
         }
     }
 //if
-if (300 > abs(read->IS) || abs(read->IS) > 400) {
+if (300 > abs(read->IS) || abs(read->IS) > 500) {
     support_ref_bnd_reads = false;
 }
 
