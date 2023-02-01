@@ -118,6 +118,7 @@ void set_contigs(std::string &s, std::vector<std::string> &contigs) {
         contigs.push_back(token);
         s.erase(0, pos + 1);
     }
+    contigs.push_back(s);
 }
 void parse_fragments(HASHTABLE* reads) {
 
@@ -230,11 +231,14 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     hts_idx_t *idx=NULL;
 
     idx = sam_index_load(fp,  bamfile);
-
+    std::vector<hts_itr_t* > chr_iters;
     if (!INPUT_CONTIGS.empty()) {
+        for (auto item : INPUT_CONTIGS) {
+            if(idx==NULL) return -1;
+            iter  = sam_itr_querys(idx, header, item.c_str());
+            chr_iters.push_back(iter);
+        }
 
-        if(idx==NULL) return -1;
-        iter  = sam_itr_querys(idx, header, INPUT_CONTIGS_STR.c_str());
 
 //        b = bam_init1();
 //        while ( sam_itr_next(in, iter, b) >= 0)
@@ -252,12 +256,18 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 //    }
     int zero = 0;
     int * prev_bnd_pos  = &zero;
-
+    if (!chr_iters.empty()) {
+        iter = chr_iters[0];
+    }
+    chr_iters.erase(chr_iters.begin());
     while (true) {
         if (iter != nullptr) {
             if (sam_itr_next(fp, iter, b) <0) break;
         } else {
-            if (sam_read1(fp,header,b) < 0) break;
+            if (!chr_iters.empty()) {
+                iter = chr_iters[0];
+                if (sam_itr_next(fp, iter, b) <0) break;
+            } else if (sam_read1(fp,header,b) < 0) break;
         }
         fetch_func(b, fp, header, read);
 //        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
