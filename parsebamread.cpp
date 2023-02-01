@@ -243,10 +243,12 @@ int reads_in_sv_region(VARIANT* varlist, int* prev_bnd_pos, alignedread* read){
         if (v.bnd_type == BND_DEL) {
             return  1;
         } else if (v.bnd_type == BND_INV) {
-            if (abs(read->IS) >= 300 and abs(read->IS) <= 500) {
+            //reads pair cannot all inside the invertion region.
+            if (abs(read->IS) >= 300 and abs(read->IS) <= 500 && (std::min(read->position, read->mateposition) < v.bnd_pos - 20 || std::max(read->position, read->mateposition) > v.bnd_mate_pos + 20)) {
                 return 1;
             }
         } else if (v.bnd_type == BND_DUP) {
+//            for dup, we will process those position according depth.
             return 2;
         }
 //        return v.bnd_type;

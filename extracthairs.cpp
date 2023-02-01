@@ -706,8 +706,8 @@ int main(int argc, char** argv) {
             free(varlist[i].allele1); free(varlist[i].allele2);
         }
         print_dup_region_snp(varlist,fragment_file,i);
-        if (varlist->snp0_dup_region != nullptr) free(varlist->snp0_dup_region);
-        if (varlist->snp1_dup_region != nullptr) free(varlist->snp1_dup_region);
+//        if (varlist->snp0_dup_region != nullptr) free(varlist->snp0_dup_region);
+//        if (varlist->snp1_dup_region != nullptr) free(varlist->snp1_dup_region);
     }
 
 	for (i=0;i<chromosomes;i++){
