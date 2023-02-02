@@ -258,13 +258,14 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     int * prev_bnd_pos  = &zero;
     if (!chr_iters.empty()) {
         iter = chr_iters[0];
+        chr_iters.erase(chr_iters.begin());
     }
-    chr_iters.erase(chr_iters.begin());
     while (true) {
         if (iter != nullptr) {
             if (sam_itr_next(fp, iter, b) <0) break;
         } else {
             if (!chr_iters.empty()) {
+                sam_itr_destroy(iter);
                 iter = chr_iters[0];
                 if (sam_itr_next(fp, iter, b) <0) break;
             } else if (sam_read1(fp,header,b) < 0) break;
