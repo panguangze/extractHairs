@@ -35,7 +35,7 @@ typedef struct {
     char strand; // added 01/26/2018
     int rescued;
     float dm;
-    bool bnd_reads;
+    int bnd_reads;
     bool is_all_m = true;
 } FRAGMENT;
 

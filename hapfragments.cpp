@@ -181,7 +181,7 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
         //fprintf(outfile,":%c",fragment->strand);
         for (i = 0; i < fragment->variants; i++) fprintf(outfile, " %d:%c:%d",fragment->alist[i].varid+1,fragment->alist[i].allele,(char)fragment->alist[i].qv-33);
     }
-    if (fragment->bnd_reads) {
+    if (fragment->bnd_reads == 1) {
         fprintf(outfile, " SV");
     }
     fprintf(outfile, "\n");
@@ -241,7 +241,7 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
         }
     }
     f->bnd_reads = f1->bnd_reads;
-    f->is_all_m = f1->is_all_m && f2->is_all_m && !f1->bnd_reads && !f2->bnd_reads;
+    f->is_all_m = f1->is_all_m && f2->is_all_m && f1->bnd_reads == 0 && f2->bnd_reads == 0;
     print_fragment(f, varlist,outfile);
     free(f);
 //        int is_print = filter_by_phasing_info(f, varlist);

@@ -88,6 +88,9 @@ std::string INPUT_CONTIGS_STR;
 //int get_chrom_name(struct alignedread* read,HASHTABLE* ht,REFLIST* reflist);
 std::unordered_map<std::string, int> SUPPORT_READS;
 char* SUPPORT_READS_TAG;
+
+std::unordered_map<std::string, int> REF_READS;
+char* REF_READS_TAG;
 int SV_AD;
 
 #include "parsebamread.h"
@@ -157,6 +160,7 @@ void print_options() {
     fprintf(stderr, "--hom <0/1> : set to 1 to include homozygous variants for processing, default = 0 (only heterozygous) \n\n");
     fprintf(stderr, "--contigs <contig names> : extract for specific contigs, split with comma\n");
     fprintf(stderr, "--support_read_tag <INFO tag> : where the support reads at vcf tag\n");
+    fprintf(stderr, "--ref_read_tag <INFO tag> : where the ref reads at vcf tag\n");
     fprintf(stderr, "--idx <vcf sample index> : where the \n");
 //    fprintf(stderr, "--support_read_tag <INFO tag> : where the support reads at vcf tag\n");
     //fprintf(stderr, "--sumall <0/1> : set to 1 to use sum of all local alignments approach (only with long reads), default = 1 \n\n");
@@ -192,6 +196,25 @@ bool find_reads_from_support_reads(alignedread* read) {
     return is_found;
 }
 
+bool find_reads_from_ref_reads(alignedread* read) {
+    auto is_found = REF_READS.find(read->readid) != REF_READS.end();
+    if (is_found) return true;
+    if (read->chrom == nullptr || read->matechrom == nullptr) {
+        return false;
+    }
+    std::string s1 = read->chrom;
+    std::string s2 = std::to_string(read->position - 1);
+    if (read->matechrom == nullptr){
+        return is_found;
+    }
+    std::string s3 = read->matechrom;
+    std::string s4 = std::to_string(read->mateposition - 1);
+    std::string span_format = "SPAN_"+s1+"_" + s2+"_" + s3+"_" + s4;
+    is_found = REF_READS.find(span_format) != REF_READS.end();
+    return is_found;
+}
+
+
 int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, REFLIST* reflist) {
     fprintf(stderr, "reading sorted bamfile %s \n", bamfile);
     int reads = 0;
@@ -215,7 +238,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     FRAGMENT fragment;
     fragment.variants = 0;
     fragment.alist = (allele*) malloc(sizeof (allele)*16184);
-    fragment.bnd_reads = false;
+    fragment.bnd_reads = 0;
     fragment.is_all_m = true;
 
     samFile *fp;
@@ -273,6 +296,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         fetch_func(b, fp, header, read);
 //        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
         auto is_found = find_reads_from_support_reads(read);
+        auto ref_found = find_reads_from_ref_reads(read);
         if ((!is_found && (read->mquality < MIN_MQ || SV_AD == 1 || (read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)))) || (read->flag & 256) == 256) {
 //            reads += 1;
 //            prevchrom = chrom;
@@ -285,7 +309,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 //            free_readmemory(read);
 //            continue;
 //        }
-        fragment.bnd_reads = false;
+        fragment.bnd_reads = 0;
         // A bug here, bam have no sequence.
         if (read->tid != prevtid) {
             chrom = getindex(ht,read->chrom);  // this will return -1 if the contig name is not  in the VCF file
@@ -334,7 +358,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         {
             fragment.is_all_m = false;
             if (is_found) {
-                fragment.bnd_reads = true;
+                fragment.bnd_reads = 1;
             }
             for (int t = 0; t < fragment.variants; t++) {fragment.alist[t].is_bnd=false;}
             fragment.variants = 0; // v1 =0; v2=0;
@@ -356,6 +380,15 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                     varlist[pos].depth++;
                     if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
                     else varlist[pos].A2 += 1;
+                } else if (REF_READS_TAG != nullptr && ref_found) {
+                    auto pos = REF_READS[std::string(read->readid)];
+                    fragment.alist[fragment.variants].varid = pos;
+                    fragment.alist[fragment.variants].allele = '0';
+                    fragment.alist[fragment.variants].qv = QVoffset + 10;
+                    fragment.variants++;
+                    varlist[pos].depth++;
+                    if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
+                    else varlist[pos].A2 += 1;
                 }
 
 
@@ -372,7 +405,10 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         } else // paired-end read
         {
             if (is_found) {
-                fragment.bnd_reads = true;
+                fragment.bnd_reads = 1;
+            }
+            if (ref_found) {
+                fragment.bnd_reads = 2;
             }
             fragment.is_all_m = true;
             for (int t = 0; t < fragment.variants; t++) {fragment.alist[t].is_bnd=false;}
@@ -386,6 +422,15 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 auto pos = SUPPORT_READS[std::string(read->readid)];
                 fragment.alist[fragment.variants].varid = pos;
                 fragment.alist[fragment.variants].allele = '1';
+                fragment.alist[fragment.variants].qv = QVoffset + 10;
+                fragment.variants++;
+                varlist[pos].depth++;
+                if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
+                else varlist[pos].A2 += 1;
+            }else if (REF_READS_TAG != nullptr && ref_found) {
+                auto pos = REF_READS[std::string(read->readid)];
+                fragment.alist[fragment.variants].varid = pos;
+                fragment.alist[fragment.variants].allele = '0';
                 fragment.alist[fragment.variants].qv = QVoffset + 10;
                 fragment.variants++;
                 varlist[pos].depth++;
@@ -585,7 +630,11 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[i], "--support_read_tag") == 0) {
             SUPPORT_READS_TAG = (char*) malloc(1024);
             strcpy(SUPPORT_READS_TAG, argv[i + 1]);
-        }else if (strcmp(argv[i], "--noquality") == 0){
+        }else if (strcmp(argv[i], "--ref_read_tag") == 0) {
+            REF_READS_TAG = (char*) malloc(1024);
+            strcpy(REF_READS_TAG, argv[i + 1]);
+        }
+        else if (strcmp(argv[i], "--noquality") == 0){
             check_input_0_or_1(argv[i + 1]);
             MISSING_QV = atoi(argv[i + 1]);
         }else if (strcmp(argv[i], "--triallelic") == 0){

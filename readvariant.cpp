@@ -378,6 +378,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                 //if (flag >0) fprintf(stderr,"%s %d %s %s \n",variant->chrom,variant->position,variant->allele1,variant->allele2);
                 variant->heterozygous = '1'; // variant will be used for outputting hairs
                 //fprintf(stdout,"variant %s %s %s %c\n",variant->allele1,variant->allele2,variant->genotype,variant->heterozygous);
+//                parse ref
                 if (variant->bnd == 1) {
                     char **support_reads = nullptr;
                     int support_reads_info_arr = 0;
@@ -423,6 +424,56 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
 //                    free(support_reads_info_arr);
 //                    free(idx_support_reads);
                     /*free(support_reads_info_arr)*//*;*/
+
+
+
+//                    ref reads
+                    char **ref_reads = nullptr;
+                    int ref_reads_info_arr = 0;
+                    int rninfo = 0;
+                    sninfo = bcf_get_format_string(header, record, REF_READS_TAG,&ref_reads, &ref_reads_info_arr);
+                    std::string idx_ref_reads = *(support_reads+SAMPLE_IDX);
+//                    sninfo = bcf_get_info_string(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
+//            if (ninfo != 0)
+//                variant->bnd_sv_len = *sv_len;
+//            if (strcmp(variant->AA, "<INS>") == 0) {
+//                char * insSeq = nullptr;
+//                int info_arr= 0;
+//                ninfo = bcf_get_info_string(header, record, "INS_SEQ", &insSeq, &sv_len_info_arr);
+//                if (ninfo != 0)
+//                    variant->bnd_ins_seq = insSeq;
+//            }
+//                    std::string tmp_reads = idx_support_reads;
+                    std::stringstream sr(idx_ref_reads);
+                    if (variant->heterozygous =='1') {
+                        while( sr.good() )
+                        {
+                            std::string substr;
+                            getline( sr, substr, ',' );
+                            std::string::size_type n = 0;
+                            const std::string s = "_COLON_";
+                            const std::string colon = ":";
+                            while ( ( n = substr.find( s, n ) ) != std::string::npos )
+                            {
+                                substr.replace(n, s.size(), colon );
+                                n += colon.size();
+                            }
+//                            substr.replace(substr.find("_COLON_"), sizeof("_COLON_") - 1, ":");
+                            SUPPORT_READS.emplace(substr, variant_ss);
+                        }
+                    }
+                    int *mate_pos2 = nullptr;
+                    int ninfo_arr2 = 0;
+                    ninfo = bcf_get_info_int32(header, record, "END", &mate_pos2, &ninfo_arr2);
+                    variant->bnd_pos = variant->position;
+                    variant->bnd_mate_pos = *mate_pos;
+                    parse_bnd(variant, chromosome);
+                    free(ref_reads);
+//                    free(support_reads_info_arr);
+//                    free(idx_support_reads);
+                    /*free(support_reads_info_arr)*//*;*/
+
+
                 }
                 return 1;
             }
