@@ -183,6 +183,8 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
     }
     if (fragment->bnd_reads == 1) {
         fprintf(outfile, " SV");
+    } else if (fragment->bnd_reads == 2) {
+        fprintf(outfile, " SV_REF");
     }
     fprintf(outfile, "\n");
 

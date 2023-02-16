@@ -432,7 +432,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                     int ref_reads_info_arr = 0;
                     int rninfo = 0;
                     sninfo = bcf_get_format_string(header, record, REF_READS_TAG,&ref_reads, &ref_reads_info_arr);
-                    std::string idx_ref_reads = *(support_reads+SAMPLE_IDX);
+                    std::string idx_ref_reads = *(ref_reads+SAMPLE_IDX);
 //                    sninfo = bcf_get_info_string(header, record, SUPPORT_READS_TAG, &support_reads, &support_reads_info_arr);
 //            if (ninfo != 0)
 //                variant->bnd_sv_len = *sv_len;
@@ -459,7 +459,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                                 n += colon.size();
                             }
 //                            substr.replace(substr.find("_COLON_"), sizeof("_COLON_") - 1, ":");
-                            SUPPORT_READS.emplace(substr, variant_ss);
+                            REF_READS.emplace(substr, variant_ss);
                         }
                     }
                     int *mate_pos2 = nullptr;

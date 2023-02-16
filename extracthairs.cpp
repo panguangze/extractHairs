@@ -10,6 +10,7 @@
 #include "vector"
 //#define _GNU_SOURCE
 #include <htslib/sam.h>
+#include <deque>
 
 #include "hashtable.h"
 #include "readfasta.h"
@@ -254,7 +255,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     hts_idx_t *idx=NULL;
 
     idx = sam_index_load(fp,  bamfile);
-    std::vector<hts_itr_t* > chr_iters;
+    std::deque<hts_itr_t* > chr_iters;
     if (!INPUT_CONTIGS.empty()) {
         for (auto item : INPUT_CONTIGS) {
             if(idx==NULL) return -1;
@@ -279,19 +280,37 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 //    }
     int zero = 0;
     int * prev_bnd_pos  = &zero;
+    bool use_iter = false;
     if (!chr_iters.empty()) {
-        iter = chr_iters[0];
-        chr_iters.erase(chr_iters.begin());
+        use_iter = true;
+        iter = chr_iters.front();
+        chr_iters.pop_front();
+//        chr_iters.erase(chr_iters.begin());
     }
     while (true) {
-        if (iter != nullptr) {
-            if (sam_itr_next(fp, iter, b) <0) break;
-        } else {
-            if (!chr_iters.empty()) {
-                sam_itr_destroy(iter);
-                iter = chr_iters[0];
-                if (sam_itr_next(fp, iter, b) <0) break;
-            } else if (sam_read1(fp,header,b) < 0) break;
+//        if (!chr_iters.empty()) {
+//            for(auto iter_item: chr_iters) {
+//
+//            }
+//        } else {
+//
+//        }
+//        if (iter != nullptr) {
+//            if (sam_itr_next(fp, iter, b) <0) {
+//                iter = chr_iters.pop_front();
+//            }
+//        } else {
+//            if (!chr_iters.empty()) {
+//                sam_itr_destroy(iter);
+//                iter = chr_iters[0];
+//                if (sam_itr_next(fp, iter, b) <0) break;
+//            } else if (sam_read1(fp,header,b) < 0) break;
+//        }
+        if (chr_iters.empty() && !use_iter && sam_read1(fp,header,b) < 0) break;
+        while(use_iter && !chr_iters.empty() && sam_itr_next(fp, iter, b) <0) {
+            iter = chr_iters.front();
+            chr_iters.pop_front();
+            sam_itr_destroy(iter);
         }
         fetch_func(b, fp, header, read);
 //        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
@@ -359,6 +378,9 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
             fragment.is_all_m = false;
             if (is_found) {
                 fragment.bnd_reads = 1;
+            }
+            if (ref_found) {
+                fragment.bnd_reads = 2;
             }
             for (int t = 0; t < fragment.variants; t++) {fragment.alist[t].is_bnd=false;}
             fragment.variants = 0; // v1 =0; v2=0;
