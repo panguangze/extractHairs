@@ -274,6 +274,12 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
         variant->genotype[2] = bcf_gt_allele(gt[2*SAMPLE_IDX + 1]) + '0';
         variant->genotype[3] = '\0';
     }
+    if (variant->genotype[0] == '/') {
+        variant->genotype[0] = '0';
+    }
+    if (variant->genotype[2] == '/') {
+        variant->genotype[2] = '0';
+    }
     
     free(gt); 
     int gt_len = strlen(variant->genotype);
@@ -338,7 +344,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
             variant->allele1 = (char*) malloc(strlen(variant->RA) + 1);
             strcpy(variant->allele1, variant->RA);
             int index = 0;
-            if (variant->genotype[0] == '0')
+            if (variant->genotype[0] == '0' || variant->genotype[0] == '.')
                 index = variant->genotype[2] - '0';
             else 
                 index = variant->genotype[0] - '0';
@@ -418,7 +424,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                     ninfo_arr = 0;
                     ninfo = bcf_get_info_int32(header, record, "END", &mate_pos, &ninfo_arr);
                     variant->bnd_pos = variant->position;
-                    variant->bnd_mate_pos = *mate_pos;
+                    variant->bnd_mate_pos = variant->bnd_pos + 1;
                     parse_bnd(variant, chromosome);
                     free(support_reads);
 //                    free(support_reads_info_arr);
@@ -466,7 +472,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                     int ninfo_arr2 = 0;
                     ninfo = bcf_get_info_int32(header, record, "END", &mate_pos2, &ninfo_arr2);
                     variant->bnd_pos = variant->position;
-                    variant->bnd_mate_pos = *mate_pos;
+                    variant->bnd_mate_pos = variant->bnd_pos + 1;
                     parse_bnd(variant, chromosome);
                     free(ref_reads);
 //                    free(support_reads_info_arr);

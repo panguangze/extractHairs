@@ -12,6 +12,8 @@
 #include <htslib/sam.h>
 #include <deque>
 
+#include <fstream>
+
 #include "hashtable.h"
 #include "readfasta.h"
 #include "bamread.h"
@@ -162,6 +164,7 @@ void print_options() {
     fprintf(stderr, "--contigs <contig names> : extract for specific contigs, split with comma\n");
     fprintf(stderr, "--support_read_tag <INFO tag> : where the support reads at vcf tag\n");
     fprintf(stderr, "--ref_read_tag <INFO tag> : where the ref reads at vcf tag\n");
+    fprintf(stderr, "--bed_region <INFO tag> : A bed region to extract lst, one region per line\n");
     fprintf(stderr, "--idx <vcf sample index> : where the \n");
 //    fprintf(stderr, "--support_read_tag <INFO tag> : where the support reads at vcf tag\n");
     //fprintf(stderr, "--sumall <0/1> : set to 1 to use sum of all local alignments approach (only with long reads), default = 1 \n\n");
@@ -215,6 +218,13 @@ bool find_reads_from_ref_reads(alignedread* read) {
     return is_found;
 }
 
+void parse_bed_regions(std::string & bed_file, std::vector<std::string> &regions){
+    std::ifstream in_bed(bed_file);
+    std::string region;
+    while (std::getline(in_bed,region)) {
+        regions.push_back(region);
+    }
+}
 
 int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, REFLIST* reflist) {
     fprintf(stderr, "reading sorted bamfile %s \n", bamfile);
@@ -287,6 +297,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         chr_iters.pop_front();
 //        chr_iters.erase(chr_iters.begin());
     }
+    bool break_all = false;
     while (true) {
 //        if (!chr_iters.empty()) {
 //            for(auto iter_item: chr_iters) {
@@ -307,11 +318,17 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 //            } else if (sam_read1(fp,header,b) < 0) break;
 //        }
         if (chr_iters.empty() && !use_iter && sam_read1(fp,header,b) < 0) break;
-        while(use_iter && !chr_iters.empty() && sam_itr_next(fp, iter, b) <0) {
+//        if (chr_iters.empty()) break;
+        while((use_iter && sam_itr_next(fp, iter, b) <0)) {
+            if (chr_iters.empty()) {
+                break_all = true;
+                break;
+            }
             iter = chr_iters.front();
             chr_iters.pop_front();
-            sam_itr_destroy(iter);
+//            sam_itr_destroy(iter);
         }
+        if (break_all) break;
         fetch_func(b, fp, header, read);
 //        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
         auto is_found = find_reads_from_support_reads(read);
@@ -552,6 +569,11 @@ int main(int argc, char** argv) {
             std::string tmp_s = std::string (argv[i + 1]);
             INPUT_CONTIGS_STR = tmp_s;
             set_contigs(tmp_s, INPUT_CONTIGS);
+        }
+        else if (strcmp(argv[i], "--bed_region") == 0) {
+            std::string tmp_s = std::string (argv[i + 1]);
+            parse_bed_regions(tmp_s, INPUT_CONTIGS);
+//            set_contigs(tmp_s, INPUT_CONTIGS);
         }
         else if (strcmp(argv[i], "--HiC") == 0 || strcmp(argv[i], "--hic") == 0){
             check_input_0_or_1(argv[i + 1]);
