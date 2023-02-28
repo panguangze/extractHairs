@@ -306,7 +306,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
     char * info = NULL;
 
     ninfo = bcf_get_info_string(header, record, "SVTYPE", &info, &ninfo_arr);
-    if (record->pos == 853473) {
+    if (record->pos == 611836) {
         int m = 2;
     }
     if (ninfo < 0) {
@@ -315,7 +315,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
         ninfo = bcf_get_info_int32(header, record, "SVLEN", &svlen, &ninfo_arr);
         if (ninfo < 0)
             variant->bnd = 0;
-        else if(*svlen > 1) {
+        else if(*svlen >= 50) {
             variant->bnd = 1;
         }
     }
@@ -323,7 +323,15 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
         if (std::strcmp(info, "SNV") == 0 || std::strcmp(info, "snv") == 0) {
             variant->bnd = 0;
         } else {
-            variant->bnd = 1;
+            int *svlen = nullptr;
+            ninfo_arr = 0;
+            ninfo = bcf_get_info_int32(header, record, "SVLEN", &svlen, &ninfo_arr);
+            if (ninfo < 0)
+                variant->bnd = 0;
+            else if(*svlen >= 50) {
+                variant->bnd = 1;
+            }
+//            variant->bnd = 1;
 	    }
 //        if (strcmp(info, "BND") == 0)
 //        {
