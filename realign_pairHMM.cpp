@@ -28,13 +28,20 @@ double sum_all_alignments_logspace(char* v, char* w,Align_Params* params, int mi
 	int band_width = min_band_width + len_diff;
 	int b1,b2;
 	//fprintf(stdout,"diff %d bw %d \n",len_diff,band_width);
+    double* lower_prev = new double[lw + 1];
+	double* middle_prev = new double[lw + 1];
+	double* upper_prev = new double[lw + 1];
+	double* lower_curr = new double[lw + 1];
+	double* middle_curr = new double[lw + 1];
+	double* upper_curr = new double[lw + 1];
 
-	double* lower_prev = (double*) calloc(sizeof(double),lw+1);
-	double* middle_prev = (double*) calloc(sizeof(double),lw+1);
-	double* upper_prev = (double*) calloc(sizeof(double),lw+1);
-	double* lower_curr = (double*) calloc(sizeof(double),lw+1);
-	double* middle_curr = (double*) calloc(sizeof(double),lw+1);
-	double* upper_curr = (double*) calloc(sizeof(double),lw+1);
+
+//	double* lower_prev = (double*) calloc(sizeof(double),lw+1);
+//	double* middle_prev = (double*) calloc(sizeof(double),lw+1);
+//	double* upper_prev = (double*) calloc(sizeof(double),lw+1);
+//	double* lower_curr = (double*) calloc(sizeof(double),lw+1);
+//	double* middle_curr = (double*) calloc(sizeof(double),lw+1);
+//	double* upper_curr = (double*) calloc(sizeof(double),lw+1);
 
 	double log0 = -100000;
 	int i=0,j=0;
@@ -122,12 +129,20 @@ double sum_all_alignments_fast(char* v, char* w,Align_Params* params, int min_ba
 	int b1,b2;
 	//fprintf(stdout,"diff %d bw %d \n",len_diff,band_width);
 
-	double* lower_prev = (double *) calloc(sizeof(double),lw+1);
-	double* middle_prev = (double *) calloc(sizeof(double),lw+1);
-	double* upper_prev = (double *) calloc(sizeof(double),lw+1);
-	double* lower_curr = (double *) calloc(sizeof(double),lw+1);
-	double* middle_curr = (double *) calloc(sizeof(double),lw+1);
-	double* upper_curr = (double *) calloc(sizeof(double),lw+1);
+    auto lower_prev = new double[lw + 1];
+    auto middle_prev = new double[lw + 1];
+    auto upper_prev = new double[lw + 1];
+    auto lower_curr = new double[lw + 1];
+    auto middle_curr = new double[lw + 1];
+    auto upper_curr = new double[lw + 1];
+
+
+//	double* lower_prev = (double *) calloc(sizeof(double),lw+1);
+//	double* middle_prev = (double *) calloc(sizeof(double),lw+1);
+//	double* upper_prev = (double *) calloc(sizeof(double),lw+1);
+//	double* lower_curr = (double *) calloc(sizeof(double),lw+1);
+//	double* middle_curr = (double *) calloc(sizeof(double),lw+1);
+//	double* upper_curr = (double *) calloc(sizeof(double),lw+1);
 
 	double log0 = 0.0;
 	int i=0,j=0;

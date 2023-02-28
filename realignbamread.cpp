@@ -149,7 +149,7 @@ int realign_HAPs(struct alignedread* read, REFLIST* reflist, int positions[], VA
 	for (j=positions[1];j<positions[3];j++)  refhap[j-positions[1]] = reflist->sequences[reflist->current][j-1];
 	refhap[j-positions[1]]  ='\0';
 
-	char* althap = (char*) malloc(positions[3]-positions[1]+1 + 4096); // edit on 11/26/18
+	char* althap = (char*) malloc(positions[3]-positions[1]+1 + 5100); // edit on 11/26/18
 	int h=0, s=0, ss=0, max_hap=0, ref_len=0, alt_len=0, total_ref_len=0, total_alt_len=0, n_max_haps = 0, rand_ix = 0;
 	double total_score = TINYLOG, max_score = -1000000000;
 	int align_qual = 0;
@@ -537,6 +537,9 @@ int compare_read_HAPs(struct alignedread* read,VARIANT* varlist,int* snplst, int
 
 int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHROMVARS* chromvars,VARIANT* varlist,int paired,FRAGMENT* fragment,int chrom,REFLIST* reflist)
 {
+    if (strcmp(read->readid, "m54329U_190607_185248/75761749/ccs") == 0) {
+        int tmp3 = 8;
+    }
     int* snplst = (int*) malloc(MAX_SNPs_SHORT_HAP*2*sizeof(int));
     int start = read->position; int end = start + read->span; int ss=0,firstvar=0,j=0,ov=0, i=0;
     // int k=0, has_a_SNV = 0;
@@ -599,7 +602,10 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
         // BUG: encountered problem where insertion of size I, with a SNV at pos z < l2+ol,
         // would accidenally try to be handled even though the insertion doesn't actually reach the SNV
         // currently restricting to non-insertions
-        if(varlist[ss].bnd == 1) {
+        if (ss == 2808953) {
+            auto tmp = 0;
+        }
+        if(varlist[ss].bnd == 1 && (strlen(varlist[ss].allele1) > 5000 || strlen(varlist[ss].allele2) > 5000) ) {
             ss++;
             continue;
         }
@@ -609,7 +615,10 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
             len_a2 = strlen(varlist[ss].allele2);
             while (ss < VARIANTS && ss <= chromvars[chrom].last && varlist[ss].position >= l2 && varlist[ss].position < l2 + ol
                    && left_on_read > len_a1 + MINLEN && left_on_read > len_a2 + MINLEN){ // so that the read is long enough to span an indel
-
+                if(varlist[ss].bnd == 1 && (strlen(varlist[ss].allele1) > 5000 || strlen(varlist[ss].allele2) > 5000) ) {
+                    ss++;
+                    continue;
+                }
                 if (varlist[ss].heterozygous >= '1' || HOMOZYGOUS ==1){
                     //fprintf(stderr,"%d %s",varlist[ss].position, varlist[ss].allele1, varlist[ss].allele2);
                     // If this variant is far away from the last variant, then analyze the cluster of variants seen up til now

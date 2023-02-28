@@ -472,6 +472,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                     int ninfo_arr2 = 0;
                     ninfo = bcf_get_info_int32(header, record, "END", &mate_pos2, &ninfo_arr2);
                     variant->bnd_pos = variant->position;
+//                    todo mate_pos
                     variant->bnd_mate_pos = variant->bnd_pos + 1;
                     parse_bnd(variant, chromosome);
                     free(ref_reads);
