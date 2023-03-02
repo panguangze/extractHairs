@@ -147,6 +147,7 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
     //new format prints col 3 as data type (0 for normal, 1 for HiC) and col 4 as mate 2 index
     if (DATA_TYPE == 2){
         if(fragment->barcode != NULL)
+//            if(fragment->barcode[0] == '\0')
             fprintf(outfile, " 2 %s -1", fragment->barcode);
         else
             fprintf(outfile, " 2 NULL -1");
@@ -216,6 +217,8 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
     if (DATA_TYPE == 2 && f1->barcode != nullptr) {
         f->barcode = (char*) malloc(strlen(f1->barcode) + 1);
         strcpy(f->barcode, f1->barcode);
+    } else {
+        f->barcode = nullptr;
     }
     f->read_qual = (f1->read_qual + f2->read_qual) / 2;
     strcpy(f->id, f1->id);
