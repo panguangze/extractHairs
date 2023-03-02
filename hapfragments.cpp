@@ -213,7 +213,7 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
 //    if (VCF_PHASED) {
     FRAGMENT* f = (FRAGMENT*)malloc(sizeof(FRAGMENT));
     f->id = (char*) malloc(strlen(f1->id) + 4);
-    if (DATA_TYPE == 2) {
+    if (DATA_TYPE == 2 && f1->barcode != nullptr) {
         f->barcode = (char*) malloc(strlen(f1->barcode) + 1);
         strcpy(f->barcode, f1->barcode);
     }
