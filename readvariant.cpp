@@ -426,8 +426,15 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                                     substr.replace(n, s.size(), colon );
                                     n += colon.size();
                                 }
+                                if (SUPPORT_READS.find(substr) == SUPPORT_READS.end()) {
+                                    std::vector<int> tmp;
+                                    tmp.push_back(variant_ss);
+                                    SUPPORT_READS.emplace(substr, tmp);
+                                } else {
+                                    SUPPORT_READS[substr].push_back(variant_ss);
+                                }
 //                            substr.replace(substr.find("_COLON_"), sizeof("_COLON_") - 1, ":");
-                                SUPPORT_READS.emplace(substr, variant_ss);
+//                                SUPPORT_READS.emplace(substr, variant_ss);
                             }
                         }
                         int *mate_pos = nullptr;
@@ -475,8 +482,15 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                                     substr.replace(n, s.size(), colon );
                                     n += colon.size();
                                 }
+                                if (REF_READS.find(substr) == REF_READS.end()) {
+                                    std::vector<int> tmp;
+                                    tmp.push_back(variant_ss);
+                                    REF_READS.emplace(substr, tmp);
+                                } else {
+                                    REF_READS[substr].push_back(variant_ss);
+                                }
 //                            substr.replace(substr.find("_COLON_"), sizeof("_COLON_") - 1, ":");
-                                REF_READS.emplace(substr, variant_ss);
+//                                REF_READS.emplace(substr, variant_ss);
                             }
                         }
                         int *mate_pos2 = nullptr;

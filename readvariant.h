@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include <map>
 #include <string>
+#include "vector"
+
 
 extern FILE* fragment_file; // FILE to which the fragments will be output, if NULL, output to stdout
 
@@ -46,8 +48,8 @@ extern int BND_RANGE;
 extern int BLAST_REGION_LEN;
 extern int SAMPLE_IDX;
 
-extern std::unordered_map<std::string, int> SUPPORT_READS;
-extern std::unordered_map<std::string, int> REF_READS;
+extern std::unordered_map<std::string, std::vector<int>> SUPPORT_READS;
+extern std::unordered_map<std::string, std::vector<int>> REF_READS;
 
 typedef struct {
     char* id;           //variant id

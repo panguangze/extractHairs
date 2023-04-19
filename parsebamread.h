@@ -12,7 +12,7 @@ extern int PARSEBND;
 extern int IFLAG;
 extern int MAX_IS;
 extern int BND_RANGE;
-extern std::unordered_map<std::string, int> SUPPORT_READS;
+extern std::unordered_map<std::string, std::vector<int>> SUPPORT_READS;
 
 
 int compare_read_SNP(struct alignedread* read, VARIANT* varlist, int ss, int start, int l1, int l2, FRAGMENT* fragment);

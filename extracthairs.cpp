@@ -89,10 +89,10 @@ int PRINT_COMPACT = 1; // 1= print each fragment block by block, 0 = print varia
 std::vector<std::string> INPUT_CONTIGS;
 std::string INPUT_CONTIGS_STR;
 //int get_chrom_name(struct alignedread* read,HASHTABLE* ht,REFLIST* reflist);
-std::unordered_map<std::string, int> SUPPORT_READS;
+std::unordered_map<std::string, std::vector<int>> SUPPORT_READS;
 char* SUPPORT_READS_TAG;
 
-std::unordered_map<std::string, int> REF_READS;
+std::unordered_map<std::string, std::vector<int>> REF_READS;
 char* REF_READS_TAG;
 int SV_AD;
 
@@ -411,23 +411,27 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 fragment.dm = read->dm;
 
                 if (SUPPORT_READS_TAG != nullptr && is_found) {
-                    auto pos = SUPPORT_READS[std::string(read->readid)];
-                    fragment.alist[fragment.variants].varid = pos;
-                    fragment.alist[fragment.variants].allele = '1';
-                    fragment.alist[fragment.variants].qv = QVoffset + 10;
-                    fragment.variants++;
-                    varlist[pos].depth++;
-                    if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
-                    else varlist[pos].A2 += 1;
+                    auto poses = SUPPORT_READS[std::string(read->readid)];
+                    for (auto pos : poses) {
+                        fragment.alist[fragment.variants].varid = pos;
+                        fragment.alist[fragment.variants].allele = '1';
+                        fragment.alist[fragment.variants].qv = QVoffset + 10;
+                        fragment.variants++;
+                        varlist[pos].depth++;
+                        if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
+                        else varlist[pos].A2 += 1;
+                    }
                 } else if (REF_READS_TAG != nullptr && ref_found) {
-                    auto pos = REF_READS[std::string(read->readid)];
-                    fragment.alist[fragment.variants].varid = pos;
-                    fragment.alist[fragment.variants].allele = '0';
-                    fragment.alist[fragment.variants].qv = QVoffset + 10;
-                    fragment.variants++;
-                    varlist[pos].depth++;
-                    if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
-                    else varlist[pos].A2 += 1;
+                    auto poses = REF_READS[std::string(read->readid)];
+                    for (auto pos : poses) {
+                        fragment.alist[fragment.variants].varid = pos;
+                        fragment.alist[fragment.variants].allele = '0';
+                        fragment.alist[fragment.variants].qv = QVoffset + 10;
+                        fragment.variants++;
+                        varlist[pos].depth++;
+                        if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
+                        else varlist[pos].A2 += 1;
+                    }
                 }
 
 
@@ -458,23 +462,27 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
             fragment.rescued = read->rescued;
             fragment.dm = read->dm;
             if (SUPPORT_READS_TAG != nullptr && is_found) {
-                auto pos = SUPPORT_READS[std::string(read->readid)];
-                fragment.alist[fragment.variants].varid = pos;
-                fragment.alist[fragment.variants].allele = '1';
-                fragment.alist[fragment.variants].qv = QVoffset + 10;
-                fragment.variants++;
-                varlist[pos].depth++;
-                if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
-                else varlist[pos].A2 += 1;
+                auto poses = SUPPORT_READS[std::string(read->readid)];
+                for (auto pos: poses) {
+                    fragment.alist[fragment.variants].varid = pos;
+                    fragment.alist[fragment.variants].allele = '1';
+                    fragment.alist[fragment.variants].qv = QVoffset + 10;
+                    fragment.variants++;
+                    varlist[pos].depth++;
+                    if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
+                    else varlist[pos].A2 += 1;
+                }
             }else if (REF_READS_TAG != nullptr && ref_found) {
-                auto pos = REF_READS[std::string(read->readid)];
-                fragment.alist[fragment.variants].varid = pos;
-                fragment.alist[fragment.variants].allele = '0';
-                fragment.alist[fragment.variants].qv = QVoffset + 10;
-                fragment.variants++;
-                varlist[pos].depth++;
-                if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
-                else varlist[pos].A2 += 1;
+                auto poses = REF_READS[std::string(read->readid)];
+                for (auto pos : poses) {
+                    fragment.alist[fragment.variants].varid = pos;
+                    fragment.alist[fragment.variants].allele = '0';
+                    fragment.alist[fragment.variants].qv = QVoffset + 10;
+                    fragment.variants++;
+                    varlist[pos].depth++;
+                    if ((read->flag & 16) == 16) varlist[pos].A2 += 1 << 16;
+                    else varlist[pos].A2 += 1;
+                }
             }
             if (chrom >= 0) extract_variants_read(read, ht, chromvars, varlist, 1, &fragment, chrom, reflist,prev_bnd_pos, is_found);
 
