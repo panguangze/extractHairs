@@ -110,7 +110,10 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
     if (strcmp(fragment->id, "SRR5114981.518061_MP") == 0){
         auto tmpp = 33;
     }
-    filter_ref_bnd(fragment);
+    if (SUPPORT_READS_TAG == NULL) {
+        filter_ref_bnd(fragment);
+//        if (fragment->support_reads < SUPPORT_READS) return 0;
+    }
 
     if (fragment->variants < 2 && DATA_TYPE != 2) return 0;
     if (strcmp(fragment->id, "D00360:95:H2YWMBCXX:2:2214:11806:83148") == 0) {
