@@ -354,6 +354,8 @@ int print_dup_region_snp(VARIANT* variant, FILE* outfile, int idx){
     int diff = 0;
     int minv = 0;
     int snp1 = 0;
+    if (v.snp0_dup_region->empty() || v.snp0_dup_region == nullptr)
+        return 0;
     for(auto item : *(v.snp0_dup_region)) {
         snp1 = (*(v.snp1_dup_region))[item.first];
         diff = abs(item.second - (*(v.snp1_dup_region))[item.first]);
