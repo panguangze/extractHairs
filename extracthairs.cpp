@@ -51,7 +51,8 @@ FILE* fragment_file;
 int TRI_ALLELIC = 0;
 int VERBOSE = 0;
 bool VCF_PHASED = false;
-int PACBIO = 0; 
+int PACBIO = 0;
+int ONT = 0;
 int USE_SUPP_ALIGNMENTS =0; // use supplementary alignments, flag = 2048
 int SUM_ALL_ALIGN =0; // if set to 1, use sum of all alignments scoring forr local realignment 
 int HOMOZYGOUS = 0; // also output alleles for homozygous variants, by default such variants are ignored
@@ -184,7 +185,8 @@ void check_input_0_or_1(char* x){
 
 bool find_reads_from_support_reads(alignedread* read) {
     auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
-    if (is_found) return true;
+    if (is_found)
+        return true;
     if (read->chrom == nullptr || read->matechrom == nullptr) {
         return false;
     }
@@ -201,8 +203,11 @@ bool find_reads_from_support_reads(alignedread* read) {
 }
 
 bool find_reads_from_ref_reads(alignedread* read) {
+    if (strcmp(read->readid, "m54329U_COLON_200715_COLON_194535/129042704/ccs") == 0)
+        int tmp = 0;
     auto is_found = REF_READS.find(read->readid) != REF_READS.end();
-    if (is_found) return true;
+    if (is_found)
+        return true;
     if (read->chrom == nullptr || read->matechrom == nullptr) {
         return false;
     }
@@ -331,6 +336,8 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         if (break_all) break;
         fetch_func(b, fp, header, read);
 //        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
+        if (strcmp(read->readid, "m54329U:200715:194535/129042704/ccs") == 0)
+            int tmp = 0;
         auto is_found = find_reads_from_support_reads(read);
         auto ref_found = find_reads_from_ref_reads(read);
         if ((!is_found && (read->mquality < MIN_MQ || SV_AD == 1 || (read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)))) || (read->flag & 256) == 256) {
@@ -436,7 +443,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
 
 
                 if (REALIGN_VARIANTS) {
-                    realign_and_extract_variants_read(read, ht, chromvars, varlist, 0, &fragment, chrom, reflist);
+                    realign_and_extract_variants_read(read, ht, chromvars, varlist, 0, &fragment, chrom, reflist, prev_bnd_pos, is_found);
                 } else {
                     extract_variants_read(read, ht, chromvars, varlist, 0, &fragment, chrom, reflist, prev_bnd_pos, is_found);
                 }
@@ -632,7 +639,8 @@ int main(int argc, char** argv) {
             INSERTION_EXTEND = log10(0.25); // this number has no basis in anything
             DELETION_OPEN = log10(0.078);
             DELETION_EXTEND = log10(0.25); // this number also has no basis in anything
-            SUM_ALL_ALIGN = 1; 
+            SUM_ALL_ALIGN = 1;
+            ONT = 1;
 
         }else if (strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "--v") == 0){
             check_input_0_or_1(argv[i + 1]);
@@ -777,9 +785,9 @@ int main(int argc, char** argv) {
         }
     }
 //TODO, temporary
-//    if (MATE_AT_SAME){
-//        print_mate_bnd_fragment(BNDs, fragment_file);
-//    }
+    if (MATE_AT_SAME){
+        print_mate_bnd_fragment(BNDs, fragment_file);
+    }
 
 //    for (const auto& bnd : BNDs) {
 //        auto idx = bnd.second.first - 1;

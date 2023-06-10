@@ -53,7 +53,8 @@ extern std::unordered_map<std::string, std::vector<int>> REF_READS;
 
 typedef struct {
     char* id;           //variant id
-    char* chrom;        //chromomsome 
+    char* chrom;        //chromomsome
+    char* bnd_mate_id; // bnd mate chromosome
     int position;       //pos
     int ss; // pos in vcf file
     short altalleles;   //alt allele no.

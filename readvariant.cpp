@@ -162,6 +162,13 @@ int parse_bnd(VARIANT *variant, int chromosome)
         variant->snp1_dup_region = new std::map<int, int>();
         free(bnd_str);
         return 0;
+    } else if (strcmp(variant->AA, "<CNV>") == 0) {
+        variant->bnd_type = BND_DUP;
+        variant->bnd_mate_chrom = variant->chrom;
+        variant->snp0_dup_region = new std::map<int, int>();
+        variant->snp1_dup_region = new std::map<int, int>();
+        free(bnd_str);
+        return 0;
     }
 
     else if (strchr(ori_bnd_str, '[') != NULL)
@@ -260,7 +267,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
 //    char t = bcf_gt_allele(gt[0]);
         char t = bcf_gt_allele(gt[2*SAMPLE_IDX]);
 //    fixme for gvcf genotype ./. t = -1
-    if (record->pos == 102808982) {
+    if (record->pos == 10510960) {
         int tmp = 33;
     }
     if (t == -1) {
@@ -320,7 +327,9 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
         }
     }
     else {
-        if (std::strcmp(info, "SNV") == 0 || std::strcmp(info, "snv") == 0) {
+        if (std::strcmp(info, "BND") == 0) {
+            variant->bnd = 1;
+        } else if (std::strcmp(info, "SNV") == 0 || std::strcmp(info, "snv") == 0) {
             variant->bnd = 0;
         } else {
             int *svlen = nullptr;
@@ -393,6 +402,11 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                 variant->heterozygous = '1'; // variant will be used for outputting hairs
                 //fprintf(stdout,"variant %s %s %s %c\n",variant->allele1,variant->allele2,variant->genotype,variant->heterozygous);
 //                parse ref
+                int minfo_arr = 0, ninfo = 0;
+                char * minfo = NULL;
+
+                ninfo = bcf_get_info_string(header, record, "MATEID", &minfo, &minfo_arr);
+                variant->bnd_mate_id = minfo;
                 if (variant->bnd == 1 ) {
                     int sninfo = 0;
 
@@ -630,14 +644,21 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
         bcf_unpack(record, BCF_UN_ALL);
         het = parse_variant_hts(&varlist[i], record, header, chromosomes, i);
         if(varlist[i].bnd == 1 && varlist[i].heterozygous != '0' && SUPPORT_READS_TAG != nullptr) {
-//            TODO, here delimiter only work for svaba
-            char* token = strtok(varlist[i].id, ":");
-            if (BNDs.find(token) == BNDs.end()) {
-                auto tmp = std::make_pair<int, int>(i+1, 0);
-                BNDs[token] = tmp;
-            } else {
-                BNDs[token].second = i + 1;
+            if (varlist[i].bnd_mate_id == nullptr || std::strcmp(varlist[i].chrom, varlist[i].bnd_mate_chrom) != 0) {
+//                fprintf(stderr, "ERROR: BND variant %s %d %s %s %s %s does not have a mate\n", varlist[i].chrom, varlist[i].position, varlist[i].RA, varlist[i].AA, varlist[i].allele1, varlist[i].allele2);
+//                exit(1);
+//                continue;
+            }else {
+                if (BNDs.find(varlist[i].id) == BNDs.end()) {
+                    auto tmp = std::make_pair<int, int>(i+1, 0);
+                    BNDs[varlist[i].bnd_mate_id] = tmp;
+                } else {
+                    BNDs[varlist[i].id].second = i + 1;
+                }
             }
+//            BNDs[varlist[i].id] = std::make_pair<int, int>(i+1, -1);
+//            BNDs[varlist[i].bnd_mate_id] = std::make_pair<int, int>(i+1, -1);
+
         }
         (*hetvariants) += het;
 
