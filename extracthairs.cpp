@@ -832,7 +832,7 @@ int main(int argc, char** argv) {
                 if (varlist->bnd != 1)
                     print_allele_depth(varlist[i], allele_depth_file, i);
                 else
-                    fprintf(fp, "%i %i %i\n", i + 1, 0, 0);
+                    fprintf(allele_depth_file, "%i %i %i\n", i + 1, 0, 0);
             }
             free(varlist[i].allele1); free(varlist[i].allele2);
         }
