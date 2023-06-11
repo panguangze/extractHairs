@@ -407,7 +407,10 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                 int *sv_len = nullptr;
                 ninfo_arr = 0;
                 ninfo = bcf_get_info_int32(header, record, "SVLEN", &sv_len, &ninfo_arr);
-                variant->bnd_sv_len = *sv_len;
+                if (ninfo < 0)
+                    variant->bnd_sv_len = 0;
+                else
+                    variant->bnd_sv_len = *sv_len;
             }
             if ((variant->genotype[0] == '0' && variant->genotype[2] == '1') || (variant->genotype[0] == '1' && variant->genotype[2] == '0')) {
                 //if (flag >0) fprintf(stderr,"%s %d %s %s \n",variant->chrom,variant->position,variant->allele1,variant->allele2);
