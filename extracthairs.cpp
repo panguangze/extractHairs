@@ -48,6 +48,7 @@ int PFLAG = 1;
 int PRINT_FRAGMENTS = 1;
 char* GROUPNAME; // for fragments from different pools, SRRxxx
 FILE* fragment_file;
+FILE* allele_depth_file;
 int TRI_ALLELIC = 0;
 int VERBOSE = 0;
 bool VCF_PHASED = false;
@@ -167,6 +168,7 @@ void print_options() {
     fprintf(stderr, "--ref_read_tag <INFO tag> : where the ref reads at vcf tag\n");
     fprintf(stderr, "--bed_region <INFO tag> : A bed region to extract lst, one region per line\n");
     fprintf(stderr, "--idx <vcf sample index> : where the \n");
+    fprintf(stderr, "--AD  : Allele depth out put file \n\n");
 //    fprintf(stderr, "--support_read_tag <INFO tag> : where the support reads at vcf tag\n");
     //fprintf(stderr, "--sumall <0/1> : set to 1 to use sum of all local alignments approach (only with long reads), default = 1 \n\n");
     //fprintf(stderr,"--out : output file for haplotype informative fragments (hairs)\n\n");
@@ -447,10 +449,11 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 } else {
                     extract_variants_read(read, ht, chromvars, varlist, 0, &fragment, chrom, reflist, prev_bnd_pos, is_found);
                 }
+                count_allele_depth(&fragment, varlist, allele_depth_file);
                 if (fragment.variants >= 2) VOfragments[0]++;
                 else if (fragment.variants >= 1) VOfragments[1]++;
-                if (fragment.variants >= 2 || (SINGLEREADS == 1 && fragment.variants >= 1))
-                    print_fragment(&fragment, varlist, fragment_file);
+//                if (fragment.variants >= 2 || (SINGLEREADS == 1 && fragment.variants >= 1))
+                print_fragment(&fragment, varlist, fragment_file, allele_depth_file);
             }
         } else // paired-end read
         {
@@ -674,6 +677,8 @@ int main(int argc, char** argv) {
         }else if (strcmp(argv[i], "--qvoffset") == 0) QVoffset = atoi(argv[i + 1]);
         else if (strcmp(argv[i], "--out") == 0 || strcmp(argv[i], "-o") == 0)
             fragment_file = fopen(argv[i + 1], "w");
+        else if (strcmp(argv[i], "--AD") == 0)
+            allele_depth_file = fopen(argv[i + 1], "w");
         else if (strcmp(argv[i], "--logfile") == 0 || strcmp(argv[i], "--log") == 0)
             logfile = fopen(argv[i + 1], "w");
         else if (strcmp(argv[i], "--singlereads") == 0){
@@ -823,9 +828,15 @@ int main(int argc, char** argv) {
 		//fprintf(stderr,"REF(strand) %d:%d ALT %d:%d\n",varlist[i].A1>>16,varlist[i].A1 & xor,varlist[i].A2>>16,varlist[i].A2 & xor);
 		free(varlist[i].genotype); free(varlist[i].RA);     free(varlist[i].AA);free(varlist[i].chrom);
         if (varlist[i].heterozygous == '1'){
+            if (allele_depth_file != NULL){
+                if (varlist->bnd != 1)
+                    print_allele_depth(varlist[i], allele_depth_file, i);
+                else
+                    fprintf(fp, "%i %i %i\n", i + 1, 0, 0);
+            }
             free(varlist[i].allele1); free(varlist[i].allele2);
         }
-        print_dup_region_snp(varlist,fragment_file,i);
+//        print_dup_region_snp(varlist,fragment_file,i);
 //        if (varlist->snp0_dup_region != nullptr) free(varlist->snp0_dup_region);
 //        if (varlist->snp1_dup_region != nullptr) free(varlist->snp1_dup_region);
     }
@@ -842,6 +853,7 @@ int main(int argc, char** argv) {
 	}
     if (logfile != NULL) fclose(logfile);
     if (fragment_file != NULL && fragment_file != stdout) fclose(fragment_file);
+    if (allele_depth_file != NULL && allele_depth_file != stdout) fclose(allele_depth_file);
 
     return 0;
 }

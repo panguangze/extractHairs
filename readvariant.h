@@ -18,7 +18,7 @@
 
 
 extern FILE* fragment_file; // FILE to which the fragments will be output, if NULL, output to stdout
-
+extern FILE* allele_depth_file; // FILE to which the allele depth will be output, if NULL, output to stdout
 extern int TRI_ALLELIC;
 
 extern int BSIZE;
@@ -58,6 +58,8 @@ typedef struct {
     int position;       //pos
     int ss; // pos in vcf file
     short altalleles;   //alt allele no.
+    int ref_allele_depth;
+    int alt_allele_depth;
     char* RA;  // reference alleles
     char* AA; // alternate alleles
     double* GLL; // genotype likelihoods added 11/25/13
@@ -114,7 +116,7 @@ typedef struct
 
 int compare_fragments(const void *a,const void *b);
  */
-
+int print_allele_depth(VARIANT &variant, FILE* fp, int i);
 int count_variants(char* vcffile, char* sampleid, int* samplecol);
 
 int count_variants_hts(char* vcffile, char* sampleid, int* samplecol);

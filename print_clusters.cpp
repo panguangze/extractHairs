@@ -185,10 +185,10 @@ int generate_single_fragment(struct alignedread** readlist, int s, int e, int le
     fp.variants = j;
     if (j >= 2) {
         fprintf(stdout, "FRAGMENT ");
-        print_fragment(&fp, varlist, stdout);
+//        print_fragment(&fp, varlist, stdout);
         //fprintf(stderr,"fragfile %s \n",fragment_file);
         //if (fragment_file != stdout)
-        print_fragment(&fp, varlist, fragment_file);
+        print_fragment(&fp, varlist, fragment_file, allele_depth_file);
     }
     free(fp.alist);
     free(fp.id);

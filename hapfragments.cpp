@@ -106,7 +106,19 @@ int filter_ref_bnd(FRAGMENT* fragment) {
     }
 }
 
-int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
+int count_allele_depth(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
+    int i = 1;
+    for (i = 0; i < fragment->variants; i++) {
+//        VARIANT* var = varlist[fragment->alist[i].varid];
+        if (fragment->alist[i].allele == '0') {
+            varlist[fragment->alist[i].varid].ref_allele_depth = varlist[fragment->alist[i].varid].ref_allele_depth + 1;
+        } else {
+            varlist[fragment->alist[i].varid].alt_allele_depth = varlist[fragment->alist[i].varid].alt_allele_depth + 1;
+        }
+    }
+}
+
+int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile, FILE* allele_out) {
     if (strcmp(fragment->id, "SRR5114981.518061_MP") == 0){
         auto tmpp = 33;
     }
@@ -114,7 +126,7 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile)  {
         filter_ref_bnd(fragment);
 //        if (fragment->support_reads < SUPPORT_READS) return 0;
     }
-
+    if(allele_out != nullptr) count_allele_depth(fragment, varlist, allele_out);
     if (fragment->variants < 2 && DATA_TYPE != 2) return 0;
     if (strcmp(fragment->id, "D00360:95:H2YWMBCXX:2:2214:11806:83148") == 0) {
         int tmp = 33;
@@ -250,7 +262,7 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
     }
     f->bnd_reads = f1->bnd_reads;
     f->is_all_m = f1->is_all_m && f2->is_all_m && f1->bnd_reads == 0 && f2->bnd_reads == 0;
-    print_fragment(f, varlist,outfile);
+    print_fragment(f, varlist,outfile, allele_depth_file);
     free(f);
 //        int is_print = filter_by_phasing_info(f, varlist);
 //        free(f);
@@ -497,31 +509,31 @@ void clean_fragmentlist(FRAGMENT* flist, int* fragments, VARIANT* varlist, int c
                         //for (j=0;j<flist[i].variants;j++) fprintf(stdout,"%d ",flist[i].alist[j].varid); fprintf(stdout,"| ");
                         //for (j=0;j<flist[i+1].variants;j++) fprintf(stdout,"%d ",flist[i+1].alist[j].varid);
                         //fprintf(stdout,"order of variants not correct %s \t",flist[i].id);
-                        print_fragment(&fragment, varlist, fragment_file);
-                        free(fragment.id);
                     }
+                    print_fragment(&fragment, varlist, fragment_file, allele_depth_file);
+//                    free(fragment.id);
 
                 }
-                else if (flist[i].variants+flist[i+1].variants ==2 && SINGLEREADS ==1 && flist[i].variants >= 1)print_fragment(&flist[i],varlist,fragment_file); // added 05/31/2017 for OPE
+                else //if (flist[i].variants+flist[i+1].variants ==2 && SINGLEREADS ==1 && flist[i].variants >= 1)
+                    print_fragment(&flist[i],varlist,fragment_file,allele_depth_file); // added 05/31/2017 for OPE
 
                 //else if (flist[i].variants ==1 && flist[i+1].variants >1) print_fragment(&flist[i+1],varlist);
                 //else if (flist[i].variants > 1 && flist[i+1].variants ==1) print_fragment(&flist[i],varlist);
                 // april 27 2012 these PE reads were being ignored until now
                 i += 2;
                 // what about overlapping paired-end reads.... reads..... ???? jan 13 2012,
-            } else if (flist[i].variants >= 2 || (SINGLEREADS == 1 && flist[i].variants >=1)) {
-                print_fragment(&flist[i], varlist, fragment_file);
+            } else {
+                print_fragment(&flist[i], varlist, fragment_file, allele_depth_file);
                 i++;
-            } else i++;
-
+            }
         }
         // last read examined if it is not paired
         if (i < *fragments) {
-            if (flist[i].variants >= 2 || (SINGLEREADS == 1 && flist[i].variants >=1)) print_fragment(&flist[i], varlist, fragment_file);
+            print_fragment(&flist[i], varlist, fragment_file, allele_depth_file);
         }
     } else // only one fragment in fraglist single end
     {
-        if (flist[first].variants >= 2 || (SINGLEREADS == 1 && flist[i].variants >=1)) print_fragment(&flist[first], varlist, fragment_file);
+        print_fragment(&flist[first], varlist, fragment_file, allele_depth_file);
     }
 
     // free the fragments starting from first....

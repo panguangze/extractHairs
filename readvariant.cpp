@@ -220,6 +220,11 @@ int parse_bnd(VARIANT *variant, int chromosome)
     free(bnd_str);
     return 0;
 }
+int print_allele_depth(VARIANT &variant, FILE* fp, int i)
+{
+    fprintf(fp, "%i %i %i\n", i + 1, variant.ref_allele_depth, variant.alt_allele_depth);
+    return 0;
+}
 
 int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header, int chromosome, int variant_ss)
 {

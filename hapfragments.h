@@ -46,7 +46,8 @@ int compare_fragments(const void *a, const void *b);
 
 int compare_alleles(const void *a, const void *b);
 
-int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile);
+int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile, FILE* outfile2);
+int count_allele_depth(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile);
 
 // make sure they are in the correct order, i+1 could be < i
 int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile);
