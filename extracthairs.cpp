@@ -543,6 +543,34 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
     return 0;
 }
 
+void calculate_allele_imb(std::vector<std::pair<int, int>>& snp_imb, FILE* allele_depth_file, int idx) {
+    if (snp_imb.size() == 0) return;
+    for (int i = 0; i < snp_imb.size() - 1; i++) {
+        int A1 = snp_imb[i].first;
+        int A2 = snp_imb[i].second;
+        int B1 = snp_imb[i + 1].first;
+        int B2 = snp_imb[i + 1].second;
+        double same = std::max(A1 * B1, A2 * B2);
+        double reverse = std::max(A1 * B2, A2 * B1);
+        double edge_same, edge_reverse;
+        if (same == 0) {
+            edge_same = 0;
+            edge_reverse = 5;
+        }
+        if (reverse == 0) {
+            edge_same = 5;
+            edge_reverse = 0;
+        }
+        if (same != 0 && reverse != 0){
+            edge_same = std::max(std::log(same/reverse), 0.0);
+            edge_reverse = std::max(std::log(reverse/same), 0.0);
+        }
+//        edge_same = edge_same < 1 ? edge_same * 5 : edge_same;
+//        edge_reverse = edge_reverse < 1 ? edge_reverse * 10 : edge_reverse;
+        fprintf(allele_depth_file, "%d %d %f %f %f %f\n", idx + i + 1, idx + i, edge_same, edge_reverse, edge_reverse, edge_same);
+    }
+}
+
 int main(int argc, char** argv) {
     char samfile[1024];
     char bamfile[1024];
@@ -754,12 +782,13 @@ int main(int argc, char** argv) {
     VARIANT* varlist;
     std::unordered_map<std::string , std::pair<int,int>> BNDs;
     int chromosomes = 0;
+    std::deque<std::pair<int, int>> cnv_regions;
 
     if (VCFformat == 1) {
         variants = count_variants_hts(variantfile, sampleid, &samplecol);
         if (variants < 0) return -1;
         varlist = (VARIANT*) malloc(sizeof (VARIANT) * variants);
-        chromosomes = read_variantfile_hts(variantfile, varlist, &ht, &hetvariants, BNDs);
+        chromosomes = read_variantfile_hts(variantfile, varlist, &ht, &hetvariants, BNDs, cnv_regions);
     } else {
         fprintf(stderr, "\nError: This refined version of extractHairs only support vcf formatted file\n");
         return -1;
@@ -823,22 +852,54 @@ int main(int argc, char** argv) {
     }
 	//free(reflist->offsets);
     //int xor = pow(2,16)-1; int c=0;
+    int curent_cnv_start = 0;
+    int curent_cnv_end = 0;
+    std::vector<std::pair<int, int>> current_snps_in_cnv;
+    std::pair<int, int> current_cnv;
+    if (cnv_regions.size() > 0){
+        current_cnv = cnv_regions.front();
+        curent_cnv_start = current_cnv.first;
+        curent_cnv_end = current_cnv.second;
+        cnv_regions.pop_front();
+    }
 	for (i=0;i<variants;i++){
         //fprintf(stderr,"variant %d %s %d cov %d %s %s ",i+1,varlist[i].genotype,varlist[i].position,varlist[i].depth,varlist[i].RA,varlist[i].AA);
 		//fprintf(stderr,"REF(strand) %d:%d ALT %d:%d\n",varlist[i].A1>>16,varlist[i].A1 & xor,varlist[i].A2>>16,varlist[i].A2 & xor);
 		free(varlist[i].genotype); free(varlist[i].RA);     free(varlist[i].AA);free(varlist[i].chrom);
         if (varlist[i].heterozygous == '1'){
-            if (allele_depth_file != NULL){
-                if (varlist->bnd != 1)
-                    print_allele_depth(varlist[i], allele_depth_file, i);
-                else
-                    fprintf(allele_depth_file, "%i %i %i\n", i + 1, 0, 0);
+            if (varlist[i].position >= curent_cnv_start && varlist[i].position <= curent_cnv_end){
+                current_snps_in_cnv.emplace_back(varlist[i].ref_allele_depth, varlist[i].alt_allele_depth);
+            } else {
+                if (varlist[i].position > curent_cnv_end && cnv_regions.size() > 0){
+                    current_cnv = cnv_regions.front();
+                    curent_cnv_start = current_cnv.first;
+                    curent_cnv_end = current_cnv.second;
+                    cnv_regions.pop_front();
+                    calculate_allele_imb(current_snps_in_cnv,allele_depth_file, i);
+                    current_snps_in_cnv.clear();
+                }
+//                current_cnv = cnv_regions.front();
+//                curent_cnv_start = current_cnv.first;
+//                curent_cnv_end = current_cnv.second;
+//                cnv_regions.pop_front();
+//                calculate_allele_imb(current_snps_in_cnv,allele_depth_file);
+//                current_snps_in_cnv.clear();
             }
+//            if (allele_depth_file != NULL){
+//                if (varlist->bnd != 1)
+//                    print_allele_depth(varlist[i], allele_depth_file, i);
+//                else
+//                    fprintf(allele_depth_file, "%i %i %i\n", i + 1, 0, 0);
+//            }
             free(varlist[i].allele1); free(varlist[i].allele2);
         }
 //        print_dup_region_snp(varlist,fragment_file,i);
 //        if (varlist->snp0_dup_region != nullptr) free(varlist->snp0_dup_region);
 //        if (varlist->snp1_dup_region != nullptr) free(varlist->snp1_dup_region);
+    }
+    if (!current_snps_in_cnv.empty()){
+        calculate_allele_imb(current_snps_in_cnv,allele_depth_file, i);
+        current_snps_in_cnv.clear();
     }
 
 	for (i=0;i<chromosomes;i++){

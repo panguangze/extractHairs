@@ -15,6 +15,7 @@
 #include <map>
 #include <string>
 #include "vector"
+#include "deque"
 
 
 extern FILE* fragment_file; // FILE to which the fragments will be output, if NULL, output to stdout
@@ -127,7 +128,7 @@ int parse_variant_hts(VARIANT* variant, const bcf1_t * record, const bcf_hdr_t *
 
 int read_variantfile(char* vcffile, VARIANT* varlist, HASHTABLE* ht, int* hetvariants, int samplecol);
 
-int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *hetvariants, std::unordered_map<std::string,std::pair<int, int>>& BNDs);
+int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *hetvariants, std::unordered_map<std::string,std::pair<int, int>>& BNDs, std::deque<std::pair<int,int>> &cnv_regions);
 
 void build_intervalmap(CHROMVARS* chromvars, int chromosomes, VARIANT* varlist, int variants);
 

@@ -10,6 +10,7 @@
 #include <htslib/vcf.h>
 #include <unordered_map>
 #include <sstream>
+#include <deque>
 
 int count_variants_hts(char* vcffile, char* sampleid, int* samplecol){
     vcfFile *fp;
@@ -402,6 +403,12 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
 
         if (variant->type != 0 || variant->bnd == 1)      // if indel or bnd, consider 0/1 only
         {
+            if(variant->bnd == 1) {
+                int *sv_len = nullptr;
+                ninfo_arr = 0;
+                ninfo = bcf_get_info_int32(header, record, "SVLEN", &sv_len, &ninfo_arr);
+                variant->bnd_sv_len = *sv_len;
+            }
             if ((variant->genotype[0] == '0' && variant->genotype[2] == '1') || (variant->genotype[0] == '1' && variant->genotype[2] == '0')) {
                 //if (flag >0) fprintf(stderr,"%s %d %s %s \n",variant->chrom,variant->position,variant->allele1,variant->allele2);
                 variant->heterozygous = '1'; // variant will be used for outputting hairs
@@ -625,7 +632,7 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
     }
 }
 
-int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *hetvariants, std::unordered_map<std::string,std::pair<int, int>>& BNDs)
+int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *hetvariants, std::unordered_map<std::string,std::pair<int, int>>& BNDs, std::deque<std::pair<int,int>> &cnv_regions)
 {
     vcfFile *fp; 
     if ((fp = vcf_open(vcffile, "r")) == 0)
@@ -648,6 +655,9 @@ int read_variantfile_hts(char *vcffile, VARIANT *varlist, HASHTABLE *ht, int *he
     {
         bcf_unpack(record, BCF_UN_ALL);
         het = parse_variant_hts(&varlist[i], record, header, chromosomes, i);
+        if (strcmp(varlist[i].AA,"<CNV>") == 0) {
+            cnv_regions.emplace_back(varlist[i].position, varlist[i].position + varlist[i].bnd_sv_len);
+        }
         if(varlist[i].bnd == 1 && varlist[i].heterozygous != '0' && SUPPORT_READS_TAG != nullptr) {
             if (varlist[i].bnd_mate_id == nullptr || std::strcmp(varlist[i].chrom, varlist[i].bnd_mate_chrom) != 0) {
 //                fprintf(stderr, "ERROR: BND variant %s %d %s %s %s %s does not have a mate\n", varlist[i].chrom, varlist[i].position, varlist[i].RA, varlist[i].AA, varlist[i].allele1, varlist[i].allele2);
