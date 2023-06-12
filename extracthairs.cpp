@@ -867,23 +867,25 @@ int main(int argc, char** argv) {
 		//fprintf(stderr,"REF(strand) %d:%d ALT %d:%d\n",varlist[i].A1>>16,varlist[i].A1 & xor,varlist[i].A2>>16,varlist[i].A2 & xor);
 		free(varlist[i].genotype); free(varlist[i].RA);     free(varlist[i].AA);free(varlist[i].chrom);
         if (varlist[i].heterozygous == '1'){
-            if (varlist[i].position >= curent_cnv_start && varlist[i].position <= curent_cnv_end){
-                current_snps_in_cnv.emplace_back(varlist[i].ref_allele_depth, varlist[i].alt_allele_depth);
-            } else {
-                if (varlist[i].position > curent_cnv_end && cnv_regions.size() > 0){
-                    current_cnv = cnv_regions.front();
-                    curent_cnv_start = current_cnv.first;
-                    curent_cnv_end = current_cnv.second;
-                    cnv_regions.pop_front();
-                    calculate_allele_imb(current_snps_in_cnv,allele_depth_file, i);
-                    current_snps_in_cnv.clear();
-                }
+            if (allele_depth_file != nullptr) {
+                if (varlist[i].position >= curent_cnv_start && varlist[i].position <= curent_cnv_end){
+                    current_snps_in_cnv.emplace_back(varlist[i].ref_allele_depth, varlist[i].alt_allele_depth);
+                } else {
+                    if (varlist[i].position > curent_cnv_end && cnv_regions.size() > 0){
+                        current_cnv = cnv_regions.front();
+                        curent_cnv_start = current_cnv.first;
+                        curent_cnv_end = current_cnv.second;
+                        cnv_regions.pop_front();
+                        calculate_allele_imb(current_snps_in_cnv,allele_depth_file, i);
+                        current_snps_in_cnv.clear();
+                    }
 //                current_cnv = cnv_regions.front();
 //                curent_cnv_start = current_cnv.first;
 //                curent_cnv_end = current_cnv.second;
 //                cnv_regions.pop_front();
 //                calculate_allele_imb(current_snps_in_cnv,allele_depth_file);
 //                current_snps_in_cnv.clear();
+                }
             }
 //            if (allele_depth_file != NULL){
 //                if (varlist->bnd != 1)
