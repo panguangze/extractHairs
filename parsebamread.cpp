@@ -271,9 +271,6 @@ int reads_in_sv_region(VARIANT* varlist, int* prev_bnd_pos, alignedread* read){
 // TODO: test for spanning read, i.e. split alignment: 1) we dont need to consider the BND direction for them 2) notice that the bnd is covered through hardclip/softclip. 3) notice that the bnd alignment is not exactly matching
 // TODO: test for discordant support reads, i.e. abnormal insertion size. 1) need to consider the direction? 2) need to use the pair-ended info to locate breake-end
 int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, int paired, FRAGMENT* fragment, int chrom, REFLIST* reflist, int * prev_bnd_pos, bool is_found) {
-    if (strcmp(read->readid,"chr22_mrecom_10560865_10561181_0:0:0_0:0:0_b71a7") == 0){
-        auto tmppp = 3;
-    }
     std::set<int> bnd_sses; // reads cover bnds
     int start = read->position;
     int end = start + read->span;

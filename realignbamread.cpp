@@ -537,9 +537,6 @@ int compare_read_HAPs(struct alignedread* read,VARIANT* varlist,int* snplst, int
 
 int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHROMVARS* chromvars,VARIANT* varlist,int paired,FRAGMENT* fragment,int chrom,REFLIST* reflist, int* prev_bnd_pos, bool is_found)
 {
-    if (strcmp(read->readid, "m54329U_190607_185248/75761749/ccs") == 0) {
-        int tmp3 = 8;
-    }
     int* snplst = (int*) malloc(MAX_SNPs_SHORT_HAP*2*sizeof(int));
     int start = read->position; int end = start + read->span; int ss=0,firstvar=0,j=0,ov=0, i=0;
     // int k=0, has_a_SNV = 0;

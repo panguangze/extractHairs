@@ -119,18 +119,12 @@ int count_allele_depth(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
 }
 
 int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile, FILE* allele_out) {
-    if (strcmp(fragment->id, "SRR5114981.518061_MP") == 0){
-        auto tmpp = 33;
-    }
     if (SUPPORT_READS_TAG == NULL) {
         filter_ref_bnd(fragment);
 //        if (fragment->support_reads < SUPPORT_READS) return 0;
     }
     if(allele_out != nullptr) count_allele_depth(fragment, varlist, allele_out);
     if (fragment->variants < 2 && DATA_TYPE != 2) return 0;
-    if (strcmp(fragment->id, "D00360:95:H2YWMBCXX:2:2214:11806:83148") == 0) {
-        int tmp = 33;
-    }
     if (PRINT_FRAGMENTS == 0) return 0;
 
     if (VCF_PHASED) {
@@ -238,9 +232,6 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
     f->read_qual = (f1->read_qual + f2->read_qual) / 2;
     strcpy(f->id, f1->id);
     strcat(f->id,"_MP");
-    if (strcmp(f1->id, "D00360:94:H2YT5BCXX:1:1109:5815:14301") == 0) {
-        int tmp = 33;
-    }
     f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size + 1));
     f->variants = f1->variants + f2_size;
     for (i = 0; i < f1->variants; i++) {
