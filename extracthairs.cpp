@@ -205,8 +205,6 @@ bool find_reads_from_support_reads(alignedread* read) {
 }
 
 bool find_reads_from_ref_reads(alignedread* read) {
-    if (strcmp(read->readid, "m54329U_COLON_200715_COLON_194535/129042704/ccs") == 0)
-        int tmp = 0;
     auto is_found = REF_READS.find(read->readid) != REF_READS.end();
     if (is_found)
         return true;
@@ -338,8 +336,6 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         if (break_all) break;
         fetch_func(b, fp, header, read);
 //        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
-        if (strcmp(read->readid, "m54329U:200715:194535/129042704/ccs") == 0)
-            int tmp = 0;
         auto is_found = find_reads_from_support_reads(read);
         auto ref_found = find_reads_from_ref_reads(read);
         if ((!is_found && (read->mquality < MIN_MQ || SV_AD == 1 || (read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)))) || (read->flag & 256) == 256) {
@@ -856,48 +852,50 @@ int main(int argc, char** argv) {
     int curent_cnv_end = 0;
     std::vector<std::pair<int, int>> current_snps_in_cnv;
     std::pair<int, int> current_cnv;
-    if (cnv_regions.size() > 0){
+    if (!cnv_regions.empty()){
         current_cnv = cnv_regions.front();
         curent_cnv_start = current_cnv.first;
         curent_cnv_end = current_cnv.second;
         cnv_regions.pop_front();
     }
-	for (i=0;i<variants;i++){
+	for (i=0;i<variants;i++) {
         //fprintf(stderr,"variant %d %s %d cov %d %s %s ",i+1,varlist[i].genotype,varlist[i].position,varlist[i].depth,varlist[i].RA,varlist[i].AA);
-		//fprintf(stderr,"REF(strand) %d:%d ALT %d:%d\n",varlist[i].A1>>16,varlist[i].A1 & xor,varlist[i].A2>>16,varlist[i].A2 & xor);
-		free(varlist[i].genotype); free(varlist[i].RA);     free(varlist[i].AA);free(varlist[i].chrom);
-        if (varlist[i].heterozygous == '1'){
+        //fprintf(stderr,"REF(strand) %d:%d ALT %d:%d\n",varlist[i].A1>>16,varlist[i].A1 & xor,varlist[i].A2>>16,varlist[i].A2 & xor);
+        free(varlist[i].genotype);
+        free(varlist[i].RA);
+        free(varlist[i].AA);
+        free(varlist[i].chrom);
+        if (varlist[i].heterozygous == '1') {
             if (allele_depth_file != nullptr) {
-                if (varlist[i].position >= curent_cnv_start && varlist[i].position <= curent_cnv_end){
+                if (cnv_regions.empty()) {
                     current_snps_in_cnv.emplace_back(varlist[i].ref_allele_depth, varlist[i].alt_allele_depth);
                 } else {
-                    if (varlist[i].position > curent_cnv_end && cnv_regions.size() > 0){
-                        current_cnv = cnv_regions.front();
-                        curent_cnv_start = current_cnv.first;
-                        curent_cnv_end = current_cnv.second;
-                        cnv_regions.pop_front();
-                        calculate_allele_imb(current_snps_in_cnv,allele_depth_file, i);
-                        current_snps_in_cnv.clear();
+                    if (varlist[i].position >= curent_cnv_start && varlist[i].position <= curent_cnv_end) {
+                        current_snps_in_cnv.emplace_back(varlist[i].ref_allele_depth, varlist[i].alt_allele_depth);
+                    } else {
+                        if (varlist[i].position > curent_cnv_end && cnv_regions.size() > 0) {
+                            current_cnv = cnv_regions.front();
+                            curent_cnv_start = current_cnv.first;
+                            curent_cnv_end = current_cnv.second;
+                            cnv_regions.pop_front();
+                            calculate_allele_imb(current_snps_in_cnv, allele_depth_file, i);
+                            current_snps_in_cnv.clear();
+                        }
                     }
-//                current_cnv = cnv_regions.front();
-//                curent_cnv_start = current_cnv.first;
-//                curent_cnv_end = current_cnv.second;
-//                cnv_regions.pop_front();
-//                calculate_allele_imb(current_snps_in_cnv,allele_depth_file);
-//                current_snps_in_cnv.clear();
                 }
-            }
 //            if (allele_depth_file != NULL){
 //                if (varlist->bnd != 1)
 //                    print_allele_depth(varlist[i], allele_depth_file, i);
 //                else
 //                    fprintf(allele_depth_file, "%i %i %i\n", i + 1, 0, 0);
 //            }
-            free(varlist[i].allele1); free(varlist[i].allele2);
-        }
+                free(varlist[i].allele1);
+                free(varlist[i].allele2);
+            }
 //        print_dup_region_snp(varlist,fragment_file,i);
 //        if (varlist->snp0_dup_region != nullptr) free(varlist->snp0_dup_region);
 //        if (varlist->snp1_dup_region != nullptr) free(varlist->snp1_dup_region);
+        }
     }
     if (!current_snps_in_cnv.empty()){
         calculate_allele_imb(current_snps_in_cnv,allele_depth_file, i);
