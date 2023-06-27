@@ -338,13 +338,17 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
         } else if (std::strcmp(info, "SNV") == 0 || std::strcmp(info, "snv") == 0) {
             variant->bnd = 0;
         } else {
-            int *svlen = nullptr;
-            ninfo_arr = 0;
-            ninfo = bcf_get_info_int32(header, record, "SVLEN", &svlen, &ninfo_arr);
-            if (ninfo < 0)
-                variant->bnd = 0;
-            else if(std::abs(*svlen) >= 50) {
+            if (std::strcmp(info, "DEL") == 0 || std::strcmp(info, "INS") == 0 || std::strcmp(info, "INV") == 0 || std::strcmp(info, "CNV") == 0 || std::strcmp(info, "DUP") == 0){
                 variant->bnd = 1;
+            } else {
+                int *svlen = nullptr;
+                ninfo_arr = 0;
+                ninfo = bcf_get_info_int32(header, record, "SVLEN", &svlen, &ninfo_arr);
+                if (ninfo < 0)
+                    variant->bnd = 0;
+                else if(std::abs(*svlen) >= 50) {
+                    variant->bnd = 1;
+                }
             }
 //            variant->bnd = 1;
 	    }
@@ -454,6 +458,9 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
                                 {
                                     substr.replace(n, s.size(), colon );
                                     n += colon.size();
+                                }
+                                if (substr == "m64011_190901_095311/38405162/ccs") {
+                                    fprintf(stderr, "found read\n");
                                 }
                                 if (SUPPORT_READS.find(substr) == SUPPORT_READS.end()) {
                                     std::vector<int> tmp;
