@@ -336,6 +336,9 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         if (break_all) break;
         fetch_func(b, fp, header, read);
 //        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
+        if (strcmp(read->readid, "m64011_190901_095311/38405162/ccs") == 0) {
+            fprintf(stderr, "found read %s\n", read->readid);
+        }
         auto is_found = find_reads_from_support_reads(read);
         auto ref_found = find_reads_from_ref_reads(read);
         if ((!is_found && (read->mquality < MIN_MQ || SV_AD == 1 || (read->flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)))) || (read->flag & 256) == 256) {
