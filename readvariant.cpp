@@ -340,6 +340,14 @@ int  parse_variant_hts(VARIANT *variant, bcf1_t *record, const bcf_hdr_t *header
         } else {
             if (std::strcmp(info, "DEL") == 0 || std::strcmp(info, "INS") == 0 || std::strcmp(info, "INV") == 0 || std::strcmp(info, "CNV") == 0 || std::strcmp(info, "DUP") == 0){
                 variant->bnd = 1;
+                int *svlen = nullptr;
+                ninfo_arr = 0;
+                ninfo = bcf_get_info_int32(header, record, "SVLEN", &svlen, &ninfo_arr);
+                if (ninfo < 0)
+                    variant->bnd = 0;
+                else if(std::abs(*svlen) >= 50) {
+                    variant->bnd = 1;
+                }
             } else {
                 int *svlen = nullptr;
                 ninfo_arr = 0;
