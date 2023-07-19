@@ -122,9 +122,10 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile, FILE* al
         filter_ref_bnd(fragment);
 //        if (fragment->support_reads < SUPPORT_READS) return 0;
     }
-//    if (strcmp(fragment->id, "ST-E00287:121:HCT3FCCXY:2:2219:16275:1555") == 0) {
+//    if (strcmp(fragment->id, "E00364:143:HNKHFCCXX:2:1203:32441:23091") == 0) {
 //        int temp = 0;
 //    }
+    if (fragment->variants == 0) return 0;
     if(allele_out != nullptr) count_allele_depth(fragment, varlist, allele_out);
     if (fragment->variants < 2 && DATA_TYPE != 2) return 0;
     if (PRINT_FRAGMENTS == 0) return 0;
