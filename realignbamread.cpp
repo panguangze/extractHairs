@@ -604,7 +604,7 @@ int realign_and_extract_variants_read(struct alignedread* read,HASHTABLE* ht,CHR
         if (varlist[ss].bnd == 1) {
             auto tmp = 0;
         }
-        if(varlist[ss].bnd == 1 && (strlen(varlist[ss].allele1) > 5000 || strlen(varlist[ss].allele2) > 5000 || strstr(varlist[ss].allele2, "<") || strstr(varlist[ss].allele2, "]") || strstr(varlist[ss].allele2, "]")) ) {
+        if(varlist[ss].bnd == 1 && (strlen(varlist[ss].allele1) > 50 || strlen(varlist[ss].allele2) > 50 || strstr(varlist[ss].allele2, "<") || strstr(varlist[ss].allele2, "]") || strstr(varlist[ss].allele2, "]")) ) {
             ss++;
             continue;
         }
