@@ -85,6 +85,7 @@ int DATA_TYPE = 0;
 // column 4 is the first SNP index of mate 2 (-1 if no mate 2)
 // column 5 is the absolute insert size
 int NEW_FORMAT = 0;
+int MAX_FRAG_COUNT_HIC = 0;
 
 int PRINT_COMPACT = 1; // 1= print each fragment block by block, 0 = print variant by variant
 
@@ -338,7 +339,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         if (break_all) break;
         fetch_func(b, fp, header, read);
 //        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
-        if (strcmp(read->readid, "ST-E00287:121:HCT3FCCXY:2:2219:16275:1555") == 0) {
+        if (strcmp(read->readid, "LIGATION_0_0_1_53") == 0) {
             fprintf(stderr, "found read %s\n", read->readid);
         }
         auto is_found = find_reads_from_support_reads(read);
@@ -510,7 +511,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 }
             }
         }
-        if ((fragments - prevfragments >= 100000) || fragments >= MAXFRAG - 10000 || (chrom != prevchrom && prevchrom != -1 && fragments > 0)) // chrom of current read is not the same as previous read's chromosome...
+        if ((fragments - prevfragments >= MAX_FRAG_COUNT_HIC) || fragments >= MAXFRAG - 10000 || (chrom != prevchrom && prevchrom != -1 && fragments > 0)) // chrom of current read is not the same as previous read's chromosome...
         {
             if (PFLAG == 1 && chrom == prevchrom) fprintf(stderr, "cleaning buffer: current chrom %s position %d fragments %d\n", read->chrom, read->position, fragments);
             else if (PFLAG == 1 && chrom != prevchrom) fprintf(stderr, "cleaning buffer for prev chrom fragments %d\n", fragments);
@@ -642,6 +643,7 @@ int main(int argc, char** argv) {
                 MAX_IS = 40000000;
                 NEW_FORMAT = 1;
                 DATA_TYPE = 1;
+                MAX_FRAG_COUNT_HIC = 500000;
             }
         }
         else if (strcmp(argv[i], "--10X") == 0 || strcmp(argv[i], "--10x") == 0){
