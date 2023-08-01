@@ -243,6 +243,7 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
     f->read_qual = (f1->read_qual + f2->read_qual) / 2;
     strcpy(f->id, f1->id);
     strcat(f->id,"_MP");
+    f->absIS = f1->absIS;
     f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size + 1));
     f->variants = f1->variants + f2_size;
     for (i = 0; i < f1->variants; i++) {
