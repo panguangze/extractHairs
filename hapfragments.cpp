@@ -1,4 +1,5 @@
 #include "hapfragments.h"
+#include "cstring"
 
 int MAX_BQ=93; // base quality cannot exceed this, QV=60
 
@@ -70,6 +71,10 @@ int filter_by_phasing_info(FRAGMENT* fragment, VARIANT* varlist){
 int compare_fragments(const void *a, const void *b) {
     FRAGMENT* f1 = (FRAGMENT*) a;
     FRAGMENT* f2 = (FRAGMENT*) b;
+    if (strcmp(f1->id ,"LIGATION_0_10_12_219") == 0) {
+        int tmp = 0;
+    }
+
     if (f1->matepos == f2->matepos) return strcmp(f1->id, f2->id);
     else return f2->matepos - f1->matepos;
 }
@@ -125,6 +130,9 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile, FILE* al
 //    if (strcmp(fragment->id, "E00364:143:HNKHFCCXX:2:1203:32441:23091") == 0) {
 //        int temp = 0;
 //    }
+    if (strcmp(fragment->id, "LIGATION_0_1_33_0") == 0) {
+        int tmp = 1;
+    }
     if (fragment->variants == 0) return 0;
     if(allele_out != nullptr) count_allele_depth(fragment, varlist, allele_out);
     if (fragment->variants < 2 && DATA_TYPE != 2) return 0;
@@ -164,7 +172,7 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile, FILE* al
         else
             fprintf(outfile, " 2 NULL -1");
     }else if (NEW_FORMAT)
-        fprintf(outfile, " %d -1 -1", DATA_TYPE);
+        fprintf(outfile, " %d %d %d", DATA_TYPE, fragment->alist[0].varid+1, fragment->absIS);
 
     //for (i=0;i<fragment->variants;i++) fprintf(stdout,"%c",fragment->alist[i].qv);
     // varid is printed with offset of 1 rather than 0 since that is encoded in the Hapcut program
