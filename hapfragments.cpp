@@ -172,7 +172,13 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile, FILE* al
         else
             fprintf(outfile, " 2 NULL -1");
     }else if (NEW_FORMAT)
-        fprintf(outfile, " %d %d %d", DATA_TYPE, fragment->alist[0].varid+1, fragment->absIS);
+        if (NEW_FORMAT == 1) {
+            if (strstr(fragment->id, "_MP") != nullptr) {
+                fprintf(outfile, " %d %d %d", DATA_TYPE, fragment->alist[0].varid+1, fragment->absIS);
+            } else {
+                fprintf(outfile, " %d -1 -1", DATA_TYPE);
+            }
+        }
 
     //for (i=0;i<fragment->variants;i++) fprintf(stdout,"%c",fragment->alist[i].qv);
     // varid is printed with offset of 1 rather than 0 since that is encoded in the Hapcut program
