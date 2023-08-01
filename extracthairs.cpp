@@ -85,7 +85,7 @@ int DATA_TYPE = 0;
 // column 4 is the first SNP index of mate 2 (-1 if no mate 2)
 // column 5 is the absolute insert size
 int NEW_FORMAT = 0;
-int MAX_FRAG_COUNT_HIC = 0;
+int MAX_FRAG_COUNT_HIC = 100000;
 
 int PRINT_COMPACT = 1; // 1= print each fragment block by block, 0 = print variant by variant
 
