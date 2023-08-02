@@ -130,9 +130,6 @@ int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile, FILE* al
 //    if (strcmp(fragment->id, "E00364:143:HNKHFCCXX:2:1203:32441:23091") == 0) {
 //        int temp = 0;
 //    }
-    if (strcmp(fragment->id, "LIGATION_0_1_33_0") == 0) {
-        int tmp = 1;
-    }
     if (fragment->variants == 0) return 0;
     if(allele_out != nullptr) count_allele_depth(fragment, varlist, allele_out);
     if (fragment->variants < 2 && DATA_TYPE != 2) return 0;
