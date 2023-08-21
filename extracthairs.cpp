@@ -339,7 +339,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         if (break_all) break;
         fetch_func(b, fp, header, read);
 //        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
-        if (strcmp(read->readid, "LIGATION_0_0_1_53") == 0) {
+        if (strcmp(read->readid, "LIGATION_0_10_12_219") == 0) {
             fprintf(stderr, "found read %s\n", read->readid);
         }
         auto is_found = find_reads_from_support_reads(read);
@@ -929,8 +929,10 @@ int main(int argc, char** argv) {
         }
     }
     if (empty_cnv){
-        print_allele_count(current_snps_in_cnv, 0);
-        calculate_allele_imb(current_snps_in_cnv, 0);
+        if (allele_count_file != nullptr )
+            print_allele_count(current_snps_in_cnv, 0);
+        if (allele_depth_file != nullptr)
+            calculate_allele_imb(current_snps_in_cnv, 0);
         current_snps_in_cnv.clear();
     }
 //    allele_count_file.close();
