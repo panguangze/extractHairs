@@ -565,12 +565,15 @@ void calculate_allele_imb(std::vector<std::pair<int, int>>& snp_imb, int idx) {
         double same = std::max(A1 * B1, A2 * B2);
         double reverse = std::max(A1 * B2, A2 * B1);
         double edge_same, edge_reverse;
+        if (float(abs(A1 - A2))/float(((A1+A2)/2)) < 0.5 || float(abs(B1 - B2))/float(((B1+B2)/2)) < 0.5) {
+            continue;
+        }
         if (same == 0) {
             edge_same = 0;
-            edge_reverse = 5;
+            edge_reverse = 0;
         }
         if (reverse == 0) {
-            edge_same = 5;
+            edge_same = 0;
             edge_reverse = 0;
         }
         if (same == 0 && reverse == 0) {
