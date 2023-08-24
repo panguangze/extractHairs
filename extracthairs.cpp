@@ -563,27 +563,35 @@ void calculate_allele_imb(std::vector<std::pair<int, int>>& snp_imb, int idx) {
         int B1 = snp_imb[i + 1].first;
         int B2 = snp_imb[i + 1].second;
         float A_max = std::max(A1, A2);
-        float B_max = std::max(A1, A2);
+        float B_max = std::max(B1, B2);
         float A_min = std::min(A1, A2);
-        float B_min = std::min(A1, A2);
+        float B_min = std::min(B1, B2);
         double same = std::max(A1 * B1, A2 * B2);
         double reverse = std::max(A1 * B2, A2 * B1);
         double edge_same, edge_reverse;
         if (float(abs(A1 - A2))/float(((A1+A2)/2)) < 0.8 || float(abs(B1 - B2))/float(((B1+B2)/2)) < 0.8) {
             edge_same = 0;
             edge_reverse = 0;
+            same = 0;
+            reverse = 0;
         }
         if (abs(A_max - B_max)/((A_max + B_max)/2) > 0.2 || abs((A_min - B_min)/((A_min - B_min)/2) > 0.2)) {
             edge_same = 0;
             edge_reverse = 0;
+            same = 0;
+            reverse = 0;
         }
         if (same == 0) {
             edge_same = 0;
             edge_reverse = 0;
+            same = 0;
+            reverse = 0;
         }
         if (reverse == 0) {
             edge_same = 0;
             edge_reverse = 0;
+            same = 0;
+            reverse = 0;
         }
         if (same == 0 && reverse == 0) {
             edge_same = 0;
