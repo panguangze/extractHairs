@@ -31,7 +31,7 @@ int compare_read_SNP(struct alignedread* read, VARIANT* varlist, int ss, int sta
         fragment->alist[fragment->variants].varid = ss;
         fragment->alist[fragment->variants].allele = match;
         //assign base quality to be minimum of base quality and mapping quality
-        if (read->mquality < (int) read->quality[l1 + offset] - QVoffset) fragment->alist[fragment->variants].qv = (char) (read->mquality + QVoffset);
+        if (MIN_MQ != 0 && read->mquality < (int) read->quality[l1 + offset] - QVoffset) fragment->alist[fragment->variants].qv = (char) (read->mquality + QVoffset);
         else fragment->alist[fragment->variants].qv = read->quality[l1 + offset];
         fragment->variants++;
         varlist[ss].depth++;
@@ -272,6 +272,9 @@ int reads_in_sv_region(VARIANT* varlist, int* prev_bnd_pos, alignedread* read){
 // TODO: test for discordant support reads, i.e. abnormal insertion size. 1) need to consider the direction? 2) need to use the pair-ended info to locate breake-end
 int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, int paired, FRAGMENT* fragment, int chrom, REFLIST* reflist, int * prev_bnd_pos, bool is_found) {
     std::set<int> bnd_sses; // reads cover bnds
+    if (strcmp(read->readid, "chr21_5011255_5011564_0:0:0_0:0:0_4b501e") == 0) {
+        int tmp = 4;
+    }
     int start = read->position;
     int end = start + read->span;
     int ss = 0, firstvar = 0, j = 0, ov = 0, i = 0;     // ss -> variant id; j -> hash index, ov -> no of variants covered by the reads
@@ -299,7 +302,6 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
     //fprintf(stderr,"ov %d %d\n",ov,firstvar);
     if ((paired == 0 && ov < 2 && SINGLEREADS == 0) || (paired == 0 && ov < 1 && SINGLEREADS == 1) || (paired == 1 && ov < 1)) return 0; //no variant on reads, return
     ss = firstvar; // use variable firstvar to store first variant that overlaps this read
-
     int l1 = 0, l2 = 0; // l1 is advance on read, l2 is advance on reference genome
     int op = 0, ol = 0; // op == operation; ol == operation length
     bool support_ref_bnd_reads = false;

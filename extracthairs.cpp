@@ -10,6 +10,7 @@
 #include "vector"
 //#define _GNU_SOURCE
 #include <htslib/sam.h>
+#include "htslib/cram.h"
 #include <deque>
 
 #include <fstream>
@@ -22,7 +23,6 @@
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 int MISSING_QV = 0;
 int MINQ = 13; // minimum base quality
 int MIN_MQ = 20; // minimum read mapping quality
@@ -339,7 +339,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         if (break_all) break;
         fetch_func(b, fp, header, read);
 //        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
-        if (strcmp(read->readid, "LIGATION_0_10_12_219") == 0) {
+        if (strcmp(read->readid, "chr1_67019_67455_0:0:0_0:0:0_cc97") == 0) {
             fprintf(stderr, "found read %s\n", read->readid);
         }
         auto is_found = find_reads_from_support_reads(read);
@@ -451,7 +451,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
                 } else {
                     extract_variants_read(read, ht, chromvars, varlist, 0, &fragment, chrom, reflist, prev_bnd_pos, is_found);
                 }
-                count_allele_depth(&fragment, varlist, allele_depth_file);
+//                count_allele_depth(&fragment, varlist, allele_depth_file);
                 if (fragment.variants >= 2) VOfragments[0]++;
                 else if (fragment.variants >= 1) VOfragments[1]++;
 //                if (fragment.variants >= 2 || (SINGLEREADS == 1 && fragment.variants >= 1))

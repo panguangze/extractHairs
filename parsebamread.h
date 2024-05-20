@@ -5,7 +5,7 @@
 #include "bamread.h"
 #include "readvariant.h"
 #include "set"
-
+extern int MIN_MQ;
 extern int VARIANTS;
 extern int PARSEINDELS;
 extern int PARSEBND;
