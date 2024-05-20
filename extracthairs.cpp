@@ -569,10 +569,10 @@ void calculate_allele_imb(std::vector<std::pair<int, int>>& snp_imb, int idx) {
         double same = std::max(A1 * B1, A2 * B2);
         double reverse = std::max(A1 * B2, A2 * B1);
         double edge_same, edge_reverse;
-        if (float(abs(A1 - A2))/float(((A1+A2)/2)) < 0.5 || float(abs(B1 - B2))/float(((B1+B2)/2)) < 0.5) {
+        if (float(abs(A1 - A2))/float(((A1+A2)/2)) < 0.8 || float(abs(B1 - B2))/float(((B1+B2)/2)) < 0.8) {
             edge_same = 0;
             edge_reverse = 0;
-        }else if (abs(A_max - B_max)/((A_max + B_max)/2) > 0.3 || abs((A_min - B_min)/((A_min - B_min)/2) > 0.3)) {
+        }else if (abs(A_max - B_max)/((A_max + B_max)/2) > 0.2 || abs((A_min - B_min)/((A_min - B_min)/2) > 0.2)) {
             edge_same = 0;
             edge_reverse = 0;
         }else {
@@ -581,9 +581,9 @@ void calculate_allele_imb(std::vector<std::pair<int, int>>& snp_imb, int idx) {
                 edge_reverse = 0;
             }else if (same == 0) {
                 edge_same = 0;
-                edge_reverse = 0.17;
+                edge_reverse = 0;
             }else if (reverse == 0) {
-                edge_same = 0.17;
+                edge_same = 0;
                 edge_reverse = 0;
             }else if (same != 0 && reverse != 0){
                 edge_same = std::max(std::log(same/reverse), 0.0);
