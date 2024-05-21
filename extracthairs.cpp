@@ -653,7 +653,6 @@ int main(int argc, char** argv) {
                 NEW_FORMAT = 1;
                 DATA_TYPE = 1;
                 MAX_FRAG_COUNT_HIC = 500000;
-                MIN_MQ = 40;
             }
         }
         else if (strcmp(argv[i], "--10X") == 0 || strcmp(argv[i], "--10x") == 0){
