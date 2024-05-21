@@ -339,7 +339,7 @@ int parse_bamfile_sorted(char* bamfile, HASHTABLE* ht, CHROMVARS* chromvars, VAR
         if (break_all) break;
         fetch_func(b, fp, header, read);
 //        auto is_found = SUPPORT_READS.find(read->readid) != SUPPORT_READS.end();
-        if (strcmp(read->readid, "chr1_67019_67455_0:0:0_0:0:0_cc97") == 0) {
+        if (strcmp(read->readid, "SN1113:585:C7877ACXX:8:1116:18285:44191") == 0) {
             fprintf(stderr, "found read %s\n", read->readid);
         }
         auto is_found = find_reads_from_support_reads(read);
@@ -649,10 +649,11 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[i], "--HiC") == 0 || strcmp(argv[i], "--hic") == 0){
             check_input_0_or_1(argv[i + 1]);
             if (atoi(argv[i + 1])){
-                MAX_IS = 40000000;
+//                MAX_IS = 40000000;
                 NEW_FORMAT = 1;
                 DATA_TYPE = 1;
                 MAX_FRAG_COUNT_HIC = 500000;
+                MIN_MQ = 40;
             }
         }
         else if (strcmp(argv[i], "--10X") == 0 || strcmp(argv[i], "--10x") == 0){

@@ -14,6 +14,7 @@ extern int SINGLEREADS;
 extern int DATA_TYPE;
 extern int NEW_FORMAT;
 extern int PRINT_COMPACT; // default = 1
+extern int MIN_MQ;
 
 typedef struct {
     char allele;

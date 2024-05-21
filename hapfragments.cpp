@@ -124,12 +124,12 @@ int count_allele_depth(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile) {
 
 int print_fragment(FRAGMENT* fragment, VARIANT* varlist, FILE* outfile, FILE* allele_out) {
     if (SUPPORT_READS_TAG == NULL) {
-        filter_ref_bnd(fragment);
+//        filter_ref_bnd(fragment);
 //        if (fragment->support_reads < SUPPORT_READS) return 0;
     }
-//    if (strcmp(fragment->id, "E00364:143:HNKHFCCXX:2:1203:32441:23091") == 0) {
-//        int temp = 0;
-//    }
+    if (strcmp(fragment->id, "HWI-ST1113:533:HHC2VADXX:1:1103:2247:68164_MP") == 0) {
+        int temp = 0;
+    }
     if (fragment->variants == 0) return 0;
     if(allele_out != nullptr) count_allele_depth(fragment, varlist, allele_out);
     if (fragment->variants < 2 && DATA_TYPE != 2) return 0;
@@ -234,6 +234,13 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
         if (ee)
             f2_size--;
     }
+    if (f1->read_qual < MIN_MQ && f2->read_qual > MIN_MQ) {
+        print_fragment(f2, varlist,outfile, allele_depth_file);
+        return 0;
+    } else if (f1->read_qual > MIN_MQ && f2->read_qual < MIN_MQ){
+        print_fragment(f1, varlist,outfile, allele_depth_file);
+        return 0;
+    }
 //    if (VCF_PHASED) {
     FRAGMENT* f = (FRAGMENT*)malloc(sizeof(FRAGMENT));
     f->id = (char*) malloc(strlen(f1->id) + 4);
@@ -246,6 +253,9 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
     f->read_qual = (f1->read_qual + f2->read_qual) / 2;
     strcpy(f->id, f1->id);
     strcat(f->id,"_MP");
+    if (strcmp(f1->id, "SN1113:585:C7877ACXX:8:1116:18285:44191") == 0) {
+        int temp = 0;
+    }
     f->absIS = f1->absIS;
     f->alist = (allele*) malloc(sizeof (allele) * (f1->variants + f2_size + 1));
     f->variants = f1->variants + f2_size;
@@ -257,6 +267,9 @@ int print_matepair(FRAGMENT* f1, FRAGMENT* f2, VARIANT* varlist, FILE* outfile) 
         bool ee = false;
         for (j = 0; j < f1->variants; j++) {
             if (f1->alist[j].varid == f2->alist[i].varid) {
+                if (f1->alist[j].qv < f2->alist[i].qv) {
+                    f->alist[j] = f2->alist[i];
+                }
                 ee = true;
                 break;
             }
