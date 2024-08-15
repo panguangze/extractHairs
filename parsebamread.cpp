@@ -272,7 +272,7 @@ int reads_in_sv_region(VARIANT* varlist, int* prev_bnd_pos, alignedread* read){
 // TODO: test for discordant support reads, i.e. abnormal insertion size. 1) need to consider the direction? 2) need to use the pair-ended info to locate breake-end
 int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* chromvars, VARIANT* varlist, int paired, FRAGMENT* fragment, int chrom, REFLIST* reflist, int * prev_bnd_pos, bool is_found) {
     std::set<int> bnd_sses; // reads cover bnds
-    if (strcmp(read->readid, "chr21_5011255_5011564_0:0:0_0:0:0_4b501e") == 0) {
+    if (strcmp(read->readid, "m54329U_200719_061020/9898009/ccs") == 0) {
         int tmp = 4;
     }
     int start = read->position;
@@ -314,9 +314,9 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
     } else if (region_tag == 2) prev_dup_pos = *prev_bnd_pos;
     ss = firstvar;
     for (i = 0; i < read->cigs; i++) {          //iter through base with CIGAR
-        if(varlist[ss].bnd == 1 && (strlen(varlist[ss].allele1) > 50 || strlen(varlist[ss].allele2) > 50 || strstr(varlist[ss].allele2, "<") || strstr(varlist[ss].allele2, "]") || strstr(varlist[ss].allele2, "]")) ) {
+        while(varlist[ss].bnd == 1 && (strlen(varlist[ss].allele1) > 50 || strlen(varlist[ss].allele2) > 50 || strstr(varlist[ss].allele2, "<") || strstr(varlist[ss].allele2, "]") || strstr(varlist[ss].allele2, "]")) ) {
             ss++;
-            continue;
+//            continue;
         }
         //fprintf(stdout,"%c %d \t",(char)read->cigarlist[i+1],read->cigarlist[i]);
         while (varlist[ss].position < start + l2 && ss <= chromvars[chrom].last) ss++;
