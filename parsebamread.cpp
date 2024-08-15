@@ -314,7 +314,7 @@ int extract_variants_read(struct alignedread* read, HASHTABLE* ht, CHROMVARS* ch
     } else if (region_tag == 2) prev_dup_pos = *prev_bnd_pos;
     ss = firstvar;
     for (i = 0; i < read->cigs; i++) {          //iter through base with CIGAR
-        while(varlist[ss].bnd == 1 && (strlen(varlist[ss].allele1) > 50 || strlen(varlist[ss].allele2) > 50 || strstr(varlist[ss].allele2, "<") || strstr(varlist[ss].allele2, "]") || strstr(varlist[ss].allele2, "]")) ) {
+        while(varlist[ss].allele1 == nullptr || varlist[ss].allele2 == nullptr || (varlist[ss].bnd == 1 && (strlen(varlist[ss].allele1) > 50 || strlen(varlist[ss].allele2) > 50 || strstr(varlist[ss    ].allele2, "<") || strstr(varlist[ss].allele2, "]") || strstr(varlist[ss].allele2, "]")) )) {
             ss++;
 //            continue;
         }
